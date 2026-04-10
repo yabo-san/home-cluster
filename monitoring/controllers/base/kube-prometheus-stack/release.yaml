@@ -31,7 +31,8 @@ spec:
   values:
     grafana:
       adminPassword: password
-      ingress: true
-      ingressClassName: traefik
-      hosts:
-        - monitoring.y4bo.com
+      ingress:
+        enabled: true
+        ingressClassName: traefik
+        hosts:
+          - monitoring.y4bo.com
