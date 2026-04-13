@@ -36,3 +36,7 @@ spec:
         ingressClassName: traefik
         hosts:
           - monitoring.y4bo.com
+        tls:
+          - secretName: grafana-tls-secret
+            hosts:
+              - monitoring.y4bo.com
