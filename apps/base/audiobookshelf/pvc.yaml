@@ -6,6 +6,7 @@ metadata:
 spec:
   accessModes:
     - ReadWriteMany
+  storageClassName: longhorn
   resources:
     requests:
       storage: 11Ti
@@ -19,6 +20,7 @@ metadata:
 spec:
   accessModes:
     - ReadWriteMany
+  storageClassName: longhorn
   resources:
     requests:
       storage: 1Gi
@@ -31,6 +33,7 @@ metadata:
 spec:
   accessModes:
     - ReadWriteMany
+  storageClassName: longhorn
   resources:
     requests:
       storage: 5Gi
