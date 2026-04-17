@@ -20,7 +20,7 @@ spec:
         - name: audiobookshelf
           image: ghcr.io/advplyr/audiobookshelf:2.33.1
           ports:
-            - containerPort: 80
+            - containerPort: 3005
           env:
             - name: TZ
               value: America/Los_Angeles
