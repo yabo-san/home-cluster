@@ -185,6 +185,7 @@ kubectl create secret generic sops-age \
 - [ ] Second cluster node (RAM expansion)
 - [ ] YAMS to [Preparr migration
 ](https://robbeverhelst.github.io/Preparr/deployment/helm/)
+- [ ] [Stirling-pdf](https://docs.stirlingpdf.com/Installation/Kubernetes%20Install)
 ## Sources
 
 - [k3s on ubuntu](https://www.digitalocean.com/community/tutorials/how-to-setup-k3s-kubernetes-cluster-on-ubuntu)
