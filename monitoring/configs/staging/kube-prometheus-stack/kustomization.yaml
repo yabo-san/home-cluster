@@ -6,6 +6,7 @@ resources:
   - grafana-admin-secret.yaml
   - grafana-oidc-secret.yaml
   - grafana-smtp-secret.yaml
+  - homelab-storage-rules.yaml
 # Dashboards: any ConfigMap labeled grafana_dashboard=1 in the monitoring namespace
 # is auto-loaded by Grafana's sidecar. Drop more .json files here + list them below.
 configMapGenerator:

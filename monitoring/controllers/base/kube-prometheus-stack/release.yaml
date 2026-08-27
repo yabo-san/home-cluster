@@ -195,6 +195,10 @@ spec:
               - monitoring.y4bo.com
     prometheus:
       prometheusSpec:
+        # Select ALL PrometheusRules cluster-wide (Sloth-generated SLOs + our custom
+        # rules), not just the chart's own release-labeled ones.
+        ruleSelectorNilUsesHelmValues: false
+        ruleNamespaceSelector: {}
         # External static targets — gooselab (NixOS) exporters, reached over the LAN
         # (192.168.4.0/22). Pods can't route the tailnet (100.x), so scrape the LAN IP.
         additionalScrapeConfigs:

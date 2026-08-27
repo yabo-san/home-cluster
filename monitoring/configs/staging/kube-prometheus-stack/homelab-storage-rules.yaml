@@ -1,0 +1,96 @@
+# Storage alerting — TUNED, not templated. Every threshold here is a judgment call,
+# and the comment says why. This is the mergerfs pool on gooselab (disk1-5 unioned as
+# /mnt/data) plus the cluster node roots.
+#
+# The headline lesson: the pool /mnt/data reads ~78% "healthy" while FOUR of its five
+# branch disks sit at ~99%. The union metric averages in the one empty disk (disk5) and
+# hides the truth. So: we DASHBOARD the branches (visibility) but ALERT on the pool
+# (actionability) — different metric for different job.
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: homelab-storage
+  namespace: monitoring
+  labels:
+    role: alert-rules
+spec:
+  groups:
+    - name: homelab-storage
+      rules:
+        # --- RECORDING RULE ---------------------------------------------------
+        # Compute pool/root usage once; alerts + dashboards reuse it. One source of
+        # truth, cheaper eval. NOTE the mountpoint filter DELIBERATELY excludes the
+        # /mnt/diskN branches: a full branch is NORMAL mergerfs behaviour (new writes
+        # just land on the branch with the most free space), not an incident.
+        - record: instance_mountpoint:fs_used_ratio
+          expr: |
+            1 - (
+              node_filesystem_avail_bytes{mountpoint=~"/|/mnt/data"}
+              / node_filesystem_size_bytes{mountpoint=~"/|/mnt/data"}
+            )
+
+        # --- WARNING = a TICKET (handle in hours) -----------------------------
+        # 85% is chosen for LEAD TIME, not because it's a round number. At the pool's
+        # fill rate that leaves weeks before full — enough to prune or add a disk.
+        # warning severity => email, NOT a page. (This is the page-vs-ticket call you
+        # already know from on-call: severity = required response time, not how scary
+        # the number looks.)
+        - alert: FilesystemFillingUp
+          expr: instance_mountpoint:fs_used_ratio > 0.85
+          for: 15m           # 15m dampens a transient (a big temp file), disk% doesn't flap
+          labels:
+            severity: warning
+          annotations:
+            summary: "{{ $labels.instance }} {{ $labels.mountpoint }} is {{ $value | humanizePercentage }} full"
+            runbook: "Check per-branch balance on the Homelab Overview dashboard. Prune media, rebalance branches, or add a disk to the pool. Not urgent — you have weeks."
+
+        # --- CRITICAL = a PAGE (act now) --------------------------------------
+        # 95% => days-to-hours of runway. THIS is the one that should wake someone.
+        - alert: FilesystemAlmostFull
+          expr: instance_mountpoint:fs_used_ratio > 0.95
+          for: 5m
+          labels:
+            severity: critical
+          annotations:
+            summary: "{{ $labels.instance }} {{ $labels.mountpoint }} is {{ $value | humanizePercentage }} full — writes at risk"
+            runbook: "Free space or add a branch now. On mergerfs, once every branch fills, writes to the pool fail even if 'the pool' looks like it has room to an averaged view."
+
+        # --- PREDICTIVE = capacity planning, not a threshold ------------------
+        # For capacity that trends predictably, a TREND beats a static line — it warns
+        # you in units you can act on ("full in N days") instead of a % you have to
+        # interpret. 7-day window because disk fills are slow: a long lookback = stable
+        # prediction; a short one = noisy garbage. Fires if the pool is projected to hit
+        # zero free within 14 days. (Teaching caveat: predictions need HISTORY — this is
+        # only meaningful once ~7d of data has accrued for the pool.)
+        - alert: MergerfsPoolProjectedFull
+          expr: |
+            predict_linear(node_filesystem_avail_bytes{mountpoint="/mnt/data"}[7d], 14*24*3600) < 0
+          for: 6h            # 6h => must be a real trend, not a burst of writes
+          labels:
+            severity: warning
+          annotations:
+            summary: "mergerfs pool /mnt/data projected to fill within 14 days at current trend"
+            runbook: "Capacity trigger. Order/add a disk or prune BEFORE the 85/95% thresholds start paging."
+
+        # --- DRIVE HEALTH: page on real failure -------------------------------
+        # SMART says a drive is failing => page. Hardware doesn't self-heal.
+        - alert: DriveSmartFailing
+          expr: smartctl_device_smart_status == 0
+          for: 5m
+          labels:
+            severity: critical
+          annotations:
+            summary: "SMART FAIL on {{ $labels.device }} ({{ $labels.instance }}) — drive is dying"
+            runbook: "Evacuate/back up that branch's data and replace the drive. mergerfs has no striping, so a dead branch loses only its own files — but act fast."
+
+        # --- DRIVE TEMP: alert on ABNORMAL, not normal-warm -------------------
+        # 7200rpm HDDs run warm; ~50°C under load is fine (sdd sits at 51°C right now).
+        # We alert only >55°C = a real cooling problem. Alerting at 51°C would be exactly
+        # the textbook alert-fatigue mistake — paging on a healthy value.
+        - alert: DriveRunningHot
+          expr: smartctl_device_temperature{temperature_type="current"} > 55
+          for: 30m
+          labels:
+            severity: warning
+          annotations:
+            summary: "{{ $labels.device }} on {{ $labels.instance }} is {{ $value }}°C — check cooling/airflow"
