@@ -74,6 +74,104 @@ spec:
           from_name: y4bo alerts
           # Proton needs TLS; port 587 = STARTTLS. user/password come from env (above).
           startTLS_policy: MandatoryStartTLS
+      # Grafana-managed alerting, provisioned as code. Uses the SMTP above to email.
+      alerting:
+        contactpoints.yaml:
+          apiVersion: 1
+          contactPoints:
+            - orgId: 1
+              name: email-kevin
+              receivers:
+                - uid: email_kevin
+                  type: email
+                  settings:
+                    addresses: kevin@y4bo.com
+                    singleEmail: false
+        policies.yaml:
+          apiVersion: 1
+          policies:
+            - orgId: 1
+              receiver: email-kevin
+              group_by: ["alertname", "instance"]
+              group_wait: 30s
+              group_interval: 5m
+              repeat_interval: 4h
+        rules.yaml:
+          apiVersion: 1
+          groups:
+            - orgId: 1
+              name: homelab-disk
+              folder: Homelab Alerts
+              interval: 1m
+              rules:
+                - uid: disk_almost_full
+                  title: DiskAlmostFull
+                  condition: C
+                  for: 5m
+                  data:
+                    - refId: A
+                      relativeTimeRange: { from: 600, to: 0 }
+                      datasourceUid: prometheus
+                      model:
+                        editorMode: code
+                        expr: '100 * (1 - node_filesystem_avail_bytes{mountpoint=~"/mnt/disk[0-9]+|/"} / node_filesystem_size_bytes{mountpoint=~"/mnt/disk[0-9]+|/"})'
+                        instant: true
+                        intervalMs: 1000
+                        legendFormat: '{{instance}} {{mountpoint}}'
+                        maxDataPoints: 43200
+                        range: false
+                        refId: A
+                    - refId: C
+                      datasourceUid: __expr__
+                      model:
+                        conditions:
+                          - evaluator: { params: [90], type: gt }
+                            operator: { type: and }
+                            query: { params: [C] }
+                            reducer: { params: [], type: last }
+                            type: query
+                        datasource: { type: __expr__, uid: __expr__ }
+                        expression: A
+                        refId: C
+                        type: threshold
+                  labels:
+                    severity: warning
+                  annotations:
+                    summary: '{{ $labels.instance }} {{ $labels.mountpoint }} is over 90% full'
+                - uid: node_exporter_down
+                  title: NodeExporterDown
+                  condition: C
+                  for: 5m
+                  data:
+                    - refId: A
+                      relativeTimeRange: { from: 600, to: 0 }
+                      datasourceUid: prometheus
+                      model:
+                        editorMode: code
+                        expr: 'up{job=~".*node.*"}'
+                        instant: true
+                        intervalMs: 1000
+                        legendFormat: '{{instance}}'
+                        maxDataPoints: 43200
+                        range: false
+                        refId: A
+                    - refId: C
+                      datasourceUid: __expr__
+                      model:
+                        conditions:
+                          - evaluator: { params: [1], type: lt }
+                            operator: { type: and }
+                            query: { params: [C] }
+                            reducer: { params: [], type: last }
+                            type: query
+                        datasource: { type: __expr__, uid: __expr__ }
+                        expression: A
+                        refId: C
+                        type: threshold
+                  labels:
+                    severity: critical
+                  annotations:
+                    summary: '{{ $labels.instance }} node exporter is DOWN'
       ingress:
         enabled: true
         ingressClassName: traefik
