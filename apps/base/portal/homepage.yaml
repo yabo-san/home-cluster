@@ -26,11 +26,11 @@ data:
   services.yaml: |
     - Media:
         - Jellyfin:
-            href: https://jellyfin.gonse.org
+            href: https://watch.gonse.org
             description: Movies & TV
             icon: jellyfin.png
         - Seerr:
-            href: https://seerr.gonse.org
+            href: https://request.gonse.org
             description: Request something
             icon: jellyseerr.png
         - Kavita:
