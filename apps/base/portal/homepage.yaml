@@ -16,9 +16,6 @@ data:
       Media:
         style: row
         columns: 3
-      Play:
-        style: row
-        columns: 2
       Admin:
         style: row
         columns: 2
@@ -37,11 +34,6 @@ data:
             href: https://kavita.gonse.org
             description: Books & comics
             icon: kavita.png
-    - Play:
-        - Minecraft:
-            href: "#"
-            description: mc.y4bo.com
-            icon: minecraft.png
     # NOTE: everyone who logs in currently sees every tile, including Admin.
     # Grafana ITSELF enforces admin-vs-viewer via the Keycloak role mapping, so a
     # non-admin who clicks it lands as a read-only Viewer (not a security hole).
