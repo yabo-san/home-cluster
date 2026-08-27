@@ -1,4 +1,8 @@
 creation_rules:
   - path_regex: .*.yaml
     encrypted_regex: ^(data|stringData)$
-    age: age1zd5n9zx0dsdwdggjuvz32ppngn45gk0tcnwlwfs53ev7szefmdfqarudsl
+    # Two recipients: the original (age1zd5n…, unverified) plus the key we KNOW
+    # Flux holds — age1a34p… is what the working audiobookshelf secret uses, so
+    # Flux decrypts it daily. A file encrypted to both opens with EITHER private
+    # key, so Flux is guaranteed to decrypt new secrets. Belt + suspenders.
+    age: age1zd5n9zx0dsdwdggjuvz32ppngn45gk0tcnwlwfs53ev7szefmdfqarudsl,age1a34pfsyga0gajdy85cqy6yv6ypyumyulwshgkgm9h69jhp25dqaq4gp87a

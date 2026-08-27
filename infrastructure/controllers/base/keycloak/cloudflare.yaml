@@ -1,0 +1,63 @@
+# Cloudflare tunnel exposing Keycloak publicly at id.y4bo.com — location-independent
+# (survives the cluster move that broke the LAN-DNS approach). This MUST be public
+# because the future NixOS box + every browser needs to reach the OIDC issuer.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cloudflared
+  namespace: keycloak
+spec:
+  selector:
+    matchLabels:
+      app: cloudflared-keycloak
+  replicas: 2
+  template:
+    metadata:
+      labels:
+        app: cloudflared-keycloak
+    spec:
+      containers:
+        - name: cloudflared
+          image: cloudflare/cloudflared:latest
+          args: ["tunnel", "--config", "/etc/cloudflared/config/config.yaml", "run"]
+          livenessProbe:
+            httpGet:
+              path: /ready
+              port: 2000
+            failureThreshold: 1
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          volumeMounts:
+            - name: config
+              mountPath: /etc/cloudflared/config
+              readOnly: true
+            - name: creds
+              mountPath: /etc/cloudflared/creds
+              readOnly: true
+      volumes:
+        - name: creds
+          secret:
+            secretName: tunnel-credentials
+        - name: config
+          configMap:
+            name: cloudflared
+            items:
+              - key: config.yaml
+                path: config.yaml
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: cloudflared
+  namespace: keycloak
+data:
+  config.yaml: |
+    # cloudflared tunnel create keycloak   (then route: id.y4bo.com)
+    tunnel: keycloak
+    credentials-file: /etc/cloudflared/creds/credentials.json
+    metrics: 0.0.0.0:2000
+    no-autoupdate: true
+    ingress:
+    - hostname: id.y4bo.com
+      service: http://keycloak:8080
+    - service: http_status:404

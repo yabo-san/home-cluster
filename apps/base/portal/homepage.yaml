@@ -1,0 +1,122 @@
+# Homepage (gethomepage.dev) — the tile dashboard. It's a static-ish app that
+# renders the YAML config below into service tiles. It sits BEHIND oauth2-proxy,
+# so it never faces the internet directly — only authenticated users reach it.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: homepage-config
+  namespace: portal
+data:
+  settings.yaml: |
+    title: y4bo lab
+    theme: dark
+    color: slate
+    headerStyle: clean
+    layout:
+      Media:
+        style: row
+        columns: 3
+      Play:
+        style: row
+        columns: 2
+      Admin:
+        style: row
+        columns: 2
+
+  services.yaml: |
+    - Media:
+        - Jellyfin:
+            href: https://jellyfin.gonse.org
+            description: Movies & TV
+            icon: jellyfin.png
+        - Seerr:
+            href: https://seerr.gonse.org
+            description: Request something
+            icon: jellyseerr.png
+        - Kavita:
+            href: https://kavita.gonse.org
+            description: Books & comics
+            icon: kavita.png
+    - Play:
+        - Minecraft:
+            href: "#"
+            description: mc.y4bo.com
+            icon: minecraft.png
+    # NOTE: everyone who logs in currently sees every tile, including Admin.
+    # Grafana ITSELF enforces admin-vs-viewer via the Keycloak role mapping, so a
+    # non-admin who clicks it lands as a read-only Viewer (not a security hole).
+    # True per-role tile HIDING is a documented phase-2 refinement.
+    - Admin:
+        - Grafana:
+            href: https://monitoring.y4bo.com
+            description: Dashboards & metrics
+            icon: grafana.png
+
+  widgets.yaml: |
+    - greeting:
+        text_size: xl
+        text: Welcome to the lab
+    - openmeteo:
+        label: Weather
+        cache: 5
+
+  bookmarks.yaml: |
+    - Community:
+        - Discord:
+            - abbr: DC
+              href: https://discord.gg/your-invite
+
+  docker.yaml: |
+    # (intentionally empty — no docker integration)
+  kubernetes.yaml: |
+    # (intentionally empty — no cluster widgets for now)
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: homepage
+  namespace: portal
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: homepage
+  template:
+    metadata:
+      labels:
+        app: homepage
+    spec:
+      containers:
+        - name: homepage
+          image: ghcr.io/gethomepage/homepage:latest
+          env:
+            # Homepage refuses requests whose Host header isn't allow-listed.
+            - name: HOMEPAGE_ALLOWED_HOSTS
+              value: login.y4bo.com
+          ports:
+            - containerPort: 3000
+          volumeMounts:
+            - name: config
+              mountPath: /app/config
+          resources:
+            requests:
+              cpu: 50m
+              memory: 128Mi
+            limits:
+              memory: 256Mi
+      volumes:
+        - name: config
+          configMap:
+            name: homepage-config
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: homepage
+  namespace: portal
+spec:
+  selector:
+    app: homepage
+  ports:
+    - port: 3000
+      targetPort: 3000

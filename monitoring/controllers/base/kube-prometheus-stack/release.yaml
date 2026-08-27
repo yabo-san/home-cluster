@@ -30,7 +30,33 @@ spec:
           kind: PrometheusRule
   values:
     grafana:
-      adminPassword: password
+      # Was `adminPassword: password` (public repo!). Now sourced from a SOPS'd
+      # secret so the tunnel can't expose an admin/password login. Create the
+      # `grafana-admin` secret in monitoring/configs/staging before this applies.
+      admin:
+        existingSecret: grafana-admin
+        userKey: admin-user
+        passwordKey: admin-password
+      # OIDC client secret arrives as GF_AUTH_GENERIC_OAUTH_CLIENT_SECRET (env),
+      # from the SOPS'd grafana-oidc secret — kept out of this plaintext values file.
+      envFromSecret: grafana-oidc
+      grafana.ini:
+        server:
+          # Grafana's public URL — so the OIDC redirect_uri it builds matches
+          # what's registered in Keycloak. This is the tunnel hostname.
+          root_url: https://monitoring.y4bo.com
+        auth.generic_oauth:
+          enabled: true
+          name: Keycloak
+          client_id: grafana
+          scopes: openid email profile
+          auth_url: https://id.y4bo.com/realms/y4bo/protocol/openid-connect/auth
+          token_url: https://id.y4bo.com/realms/y4bo/protocol/openid-connect/token
+          api_url: https://id.y4bo.com/realms/y4bo/protocol/openid-connect/userinfo
+          # Map Keycloak realm roles -> Grafana roles. Give yourself grafana-admin
+          # in Keycloak and you land as an Admin; everyone else is a Viewer.
+          role_attribute_path: "contains(realm_access.roles[*], 'grafana-admin') && 'Admin' || contains(realm_access.roles[*], 'grafana-editor') && 'Editor' || 'Viewer'"
+          allow_sign_up: true
       ingress:
         enabled: true
         ingressClassName: traefik

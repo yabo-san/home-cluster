@@ -1,0 +1,78 @@
+# oauth2-proxy — the SSO doorman. The tunnel points here (not at Homepage). Every
+# request must carry a valid Keycloak session or it bounces you to id.y4bo.com to
+# log in. Once authenticated, it proxies through to Homepage. This is what makes
+# login.y4bo.com a *login* page: no Keycloak session, no entry.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: oauth2-proxy
+  namespace: portal
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: oauth2-proxy
+  template:
+    metadata:
+      labels:
+        app: oauth2-proxy
+    spec:
+      containers:
+        - name: oauth2-proxy
+          image: quay.io/oauth2-proxy/oauth2-proxy:v7.7.1
+          env:
+            - name: OAUTH2_PROXY_PROVIDER
+              value: oidc
+            - name: OAUTH2_PROXY_OIDC_ISSUER_URL
+              value: https://id.y4bo.com/realms/y4bo
+            - name: OAUTH2_PROXY_CLIENT_ID
+              value: portal
+            # secret + cookie seed come from the SOPS'd secret
+            - name: OAUTH2_PROXY_CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: oauth2-proxy
+                  key: client-secret
+            - name: OAUTH2_PROXY_COOKIE_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: oauth2-proxy
+                  key: cookie-secret
+            - name: OAUTH2_PROXY_REDIRECT_URL
+              value: https://login.y4bo.com/oauth2/callback
+            - name: OAUTH2_PROXY_UPSTREAMS
+              value: http://homepage:3000
+            - name: OAUTH2_PROXY_HTTP_ADDRESS
+              value: 0.0.0.0:4180
+            - name: OAUTH2_PROXY_EMAIL_DOMAINS
+              value: "*"                       # accept any Keycloak user
+            - name: OAUTH2_PROXY_SCOPE
+              value: openid email profile
+            - name: OAUTH2_PROXY_COOKIE_SECURE
+              value: "true"
+            - name: OAUTH2_PROXY_REVERSE_PROXY
+              value: "true"                    # trust the tunnel's forwarded headers
+            - name: OAUTH2_PROXY_SKIP_PROVIDER_BUTTON
+              value: "true"                    # jump straight to Keycloak, no interstitial
+            - name: OAUTH2_PROXY_WHITELIST_DOMAINS
+              value: .y4bo.com
+          ports:
+            - containerPort: 4180
+          resources:
+            requests:
+              cpu: 25m
+              memory: 64Mi
+            limits:
+              memory: 128Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: oauth2-proxy
+  namespace: portal
+spec:
+  selector:
+    app: oauth2-proxy
+  ports:
+    - port: 4180
+      targetPort: 4180
