@@ -83,3 +83,18 @@ spec:
           - secretName: grafana-tls-secret
             hosts:
               - monitoring.y4bo.com
+    prometheus:
+      prometheusSpec:
+        # External static targets — gooselab (NixOS) exporters, reached over the LAN
+        # (192.168.4.0/22). Pods can't route the tailnet (100.x), so scrape the LAN IP.
+        additionalScrapeConfigs:
+          - job_name: gooselab-node
+            static_configs:
+              - targets: ["192.168.4.66:9100"]
+                labels:
+                  instance: gooselab
+          - job_name: gooselab-smartctl
+            static_configs:
+              - targets: ["192.168.4.66:9633"]
+                labels:
+                  instance: gooselab
