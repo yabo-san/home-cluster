@@ -40,6 +40,15 @@ spec:
       # OIDC client secret arrives as GF_AUTH_GENERIC_OAUTH_CLIENT_SECRET (env),
       # from the SOPS'd grafana-oidc secret — kept out of this plaintext values file.
       envFromSecret: grafana-oidc
+      # Loki datasource — logs pillar, same Grafana pane as metrics.
+      additionalDataSources:
+        - name: Loki
+          type: loki
+          uid: loki
+          access: proxy
+          url: http://loki-stack.monitoring.svc.cluster.local:3100
+          jsonData:
+            maxLines: 1000
       # SMTP creds (Proton) for alert emails — user + token from the SOPS'd grafana-smtp secret.
       envValueFrom:
         GF_SMTP_USER:
