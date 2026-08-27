@@ -18,7 +18,7 @@ spec:
     spec:
       containers:
         - name: keycloak
-          image: quay.io/keycloak/keycloak:26.0
+          image: quay.io/keycloak/keycloak:26.7
           # --import-realm imports any realm files under /opt/keycloak/data/import
           # on startup, but ONLY creates realms that don't already exist — so this
           # is safe to leave on across reboots (it won't clobber your edits).
