@@ -56,9 +56,6 @@ data:
     - greeting:
         text_size: xl
         text: Welcome to the lab
-    - openmeteo:
-        label: Weather
-        cache: 5
 
   bookmarks.yaml: |
     - Community:
@@ -93,11 +90,15 @@ spec:
             # Homepage refuses requests whose Host header isn't allow-listed.
             - name: HOMEPAGE_ALLOWED_HOSTS
               value: login.y4bo.com
+            - name: LOG_TARGETS
+              value: stdout
           ports:
             - containerPort: 3000
           volumeMounts:
             - name: config
               mountPath: /app/config
+            - name: logs                       # writable scratch: /app/config is a
+              mountPath: /app/config/logs       # read-only configmap, Homepage needs
           resources:
             requests:
               cpu: 50m
@@ -108,6 +109,8 @@ spec:
         - name: config
           configMap:
             name: homepage-config
+        - name: logs
+          emptyDir: {}
 ---
 apiVersion: v1
 kind: Service
