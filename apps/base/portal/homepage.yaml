@@ -39,6 +39,10 @@ data:
             href: https://monitoring.y4bo.com
             description: Dashboards & metrics
             icon: grafana.png
+        - Keycloak:
+            href: https://id.y4bo.com/admin/y4bo/console
+            description: Users & SSO
+            icon: keycloak.png
 
   widgets.yaml: |
     - greeting:
