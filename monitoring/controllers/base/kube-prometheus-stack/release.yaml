@@ -117,7 +117,7 @@ spec:
                         expr: '100 * (1 - node_filesystem_avail_bytes{mountpoint=~"/mnt/disk[0-9]+|/"} / node_filesystem_size_bytes{mountpoint=~"/mnt/disk[0-9]+|/"})'
                         instant: true
                         intervalMs: 1000
-                        legendFormat: '{{instance}} {{mountpoint}}'
+                        legendFormat: ""
                         maxDataPoints: 43200
                         range: false
                         refId: A
@@ -137,7 +137,7 @@ spec:
                   labels:
                     severity: warning
                   annotations:
-                    summary: '{{ $labels.instance }} {{ $labels.mountpoint }} is over 90% full'
+                    summary: "Filesystem over 90% full — check the instance and mountpoint labels"
                 - uid: node_exporter_down
                   title: NodeExporterDown
                   condition: C
@@ -151,7 +151,7 @@ spec:
                         expr: 'up{job=~".*node.*"}'
                         instant: true
                         intervalMs: 1000
-                        legendFormat: '{{instance}}'
+                        legendFormat: ""
                         maxDataPoints: 43200
                         range: false
                         refId: A
@@ -171,7 +171,7 @@ spec:
                   labels:
                     severity: critical
                   annotations:
-                    summary: '{{ $labels.instance }} node exporter is DOWN'
+                    summary: "A node_exporter target is DOWN — check the instance label"
       ingress:
         enabled: true
         ingressClassName: traefik
