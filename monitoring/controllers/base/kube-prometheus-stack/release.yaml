@@ -114,7 +114,7 @@ spec:
                       datasourceUid: prometheus
                       model:
                         editorMode: code
-                        expr: '100 * (1 - node_filesystem_avail_bytes{mountpoint=~"/mnt/disk[0-9]+|/"} / node_filesystem_size_bytes{mountpoint=~"/mnt/disk[0-9]+|/"})'
+                        expr: '100 * (1 - node_filesystem_avail_bytes{mountpoint=~"/|/mnt/data"} / node_filesystem_size_bytes{mountpoint=~"/|/mnt/data"})'
                         instant: true
                         intervalMs: 1000
                         legendFormat: ""
