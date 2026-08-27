@@ -30,10 +30,6 @@ data:
             href: https://request.gonse.org
             description: Request something
             icon: jellyseerr.png
-        - Kavita:
-            href: https://kavita.gonse.org
-            description: Books & comics
-            icon: kavita.png
     # NOTE: everyone who logs in currently sees every tile, including Admin.
     # Grafana ITSELF enforces admin-vs-viewer via the Keycloak role mapping, so a
     # non-admin who clicks it lands as a read-only Viewer (not a security hole).
