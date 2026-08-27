@@ -40,6 +40,16 @@ spec:
       # OIDC client secret arrives as GF_AUTH_GENERIC_OAUTH_CLIENT_SECRET (env),
       # from the SOPS'd grafana-oidc secret — kept out of this plaintext values file.
       envFromSecret: grafana-oidc
+      # SMTP creds (Proton) for alert emails — user + token from the SOPS'd grafana-smtp secret.
+      envValueFrom:
+        GF_SMTP_USER:
+          secretKeyRef:
+            name: grafana-smtp
+            key: GF_SMTP_USER
+        GF_SMTP_PASSWORD:
+          secretKeyRef:
+            name: grafana-smtp
+            key: GF_SMTP_PASSWORD
       grafana.ini:
         server:
           # Grafana's public URL — so the OIDC redirect_uri it builds matches
@@ -57,6 +67,13 @@ spec:
           # in Keycloak and you land as an Admin; everyone else is a Viewer.
           role_attribute_path: "contains(realm_access.roles[*], 'grafana-admin') && 'Admin' || contains(realm_access.roles[*], 'grafana-editor') && 'Editor' || 'Viewer'"
           allow_sign_up: true
+        smtp:
+          enabled: true
+          host: smtp.protonmail.ch:587
+          from_address: kevin@y4bo.com
+          from_name: y4bo alerts
+          # Proton needs TLS; port 587 = STARTTLS. user/password come from env (above).
+          startTLS_policy: MandatoryStartTLS
       ingress:
         enabled: true
         ingressClassName: traefik
