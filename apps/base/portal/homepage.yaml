@@ -83,6 +83,18 @@ spec:
       labels:
         app: homepage
     spec:
+      # Homepage copies its skeleton config files into /app/config on boot, which
+      # fails if that dir is a read-only ConfigMap mount. So: seed OUR config from
+      # the ConfigMap into a writable emptyDir, then Homepage can add its own files.
+      initContainers:
+        - name: seed-config
+          image: busybox:1.36
+          command: ["sh", "-c", "cp -L /src/* /app/config/ 2>/dev/null; true"]
+          volumeMounts:
+            - name: config-src
+              mountPath: /src
+            - name: config
+              mountPath: /app/config
       containers:
         - name: homepage
           image: ghcr.io/gethomepage/homepage:latest
@@ -97,8 +109,6 @@ spec:
           volumeMounts:
             - name: config
               mountPath: /app/config
-            - name: logs                       # writable scratch: /app/config is a
-              mountPath: /app/config/logs       # read-only configmap, Homepage needs
           resources:
             requests:
               cpu: 50m
@@ -106,10 +116,10 @@ spec:
             limits:
               memory: 256Mi
       volumes:
-        - name: config
+        - name: config-src
           configMap:
             name: homepage-config
-        - name: logs
+        - name: config
           emptyDir: {}
 ---
 apiVersion: v1
