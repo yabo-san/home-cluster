@@ -49,6 +49,9 @@ spec:
           url: http://loki-stack.monitoring.svc.cluster.local:3100
           jsonData:
             maxLines: 1000
+      # Hide the chart's ~20 stock dashboards (many read No-data on k3s). The sidecar
+      # still loads OUR configmaps (Homelab Overview, Node Exporter Full, Namespaces).
+      defaultDashboardsEnabled: false
       # SMTP creds (Proton) for alert emails — user + token from the SOPS'd grafana-smtp secret.
       envValueFrom:
         GF_SMTP_USER:
