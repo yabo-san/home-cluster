@@ -38,7 +38,10 @@
       "gridPos": { "h": 18, "w": 24, "x": 0, "y": 4 },
       "targets": [ { "refId": "A", "expr": "ALERTS{alertstate=\"firing\"}", "instant": true, "format": "table" } ],
       "transformations": [
-        { "id": "organize", "options": { "excludeByName": { "Time": true, "Value": true, "__name__": true, "alertstate": true, "endpoint": true, "container": true, "namespace": true, "service": true, "pod": true, "prometheus": true }, "indexByName": { "alertname": 0, "severity": 1, "instance": 2, "job": 3 } } }
+        { "id": "organize", "options": {
+          "excludeByName": { "Time": true, "Value": true, "__name__": true, "alertstate": true, "prometheus": true, "endpoint": true, "container": true },
+          "indexByName": { "alertname": 0, "severity": 1, "instance": 2, "node": 3, "namespace": 4, "pod": 5, "service": 6, "mountpoint": 7, "device": 8, "job": 9 }
+        } }
       ],
       "fieldConfig": {
         "defaults": {},
