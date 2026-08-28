@@ -42,5 +42,11 @@ configMapGenerator:
     options:
       labels:
         grafana_dashboard: "1"
+  - name: grafana-dashboard-active-alerts
+    files:
+      - dashboards/active-alerts.json
+    options:
+      labels:
+        grafana_dashboard: "1"
 generatorOptions:
   disableNameSuffixHash: true

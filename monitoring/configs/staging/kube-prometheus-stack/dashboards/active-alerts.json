@@ -1,0 +1,55 @@
+{
+  "annotations": { "list": [] },
+  "editable": true,
+  "time": { "from": "now-6h", "to": "now" },
+  "refresh": "30s",
+  "schemaVersion": 39,
+  "tags": ["alerts"],
+  "title": "Active Alerts",
+  "uid": "active-alerts",
+  "templating": {
+    "list": [
+      { "name": "datasource", "type": "datasource", "query": "prometheus", "current": {}, "hide": 0, "refresh": 1 }
+    ]
+  },
+  "panels": [
+    {
+      "type": "stat",
+      "title": "Firing now",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 4, "w": 6, "x": 0, "y": 0 },
+      "targets": [ { "refId": "A", "expr": "count(ALERTS{alertstate=\"firing\"})", "instant": true } ],
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "background", "graphMode": "none" },
+      "fieldConfig": { "defaults": { "thresholds": { "mode": "absolute", "steps": [ { "value": null, "color": "green" }, { "value": 1, "color": "orange" } ] } } }
+    },
+    {
+      "type": "stat",
+      "title": "Pending",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 4, "w": 6, "x": 6, "y": 0 },
+      "targets": [ { "refId": "A", "expr": "count(ALERTS{alertstate=\"pending\"}) or vector(0)", "instant": true } ],
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "background", "graphMode": "none" },
+      "fieldConfig": { "defaults": { "thresholds": { "mode": "absolute", "steps": [ { "value": null, "color": "green" }, { "value": 1, "color": "yellow" } ] } } }
+    },
+    {
+      "type": "table",
+      "title": "Firing alerts",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 18, "w": 24, "x": 0, "y": 4 },
+      "targets": [ { "refId": "A", "expr": "ALERTS{alertstate=\"firing\"}", "instant": true, "format": "table" } ],
+      "transformations": [
+        { "id": "organize", "options": { "excludeByName": { "Time": true, "Value": true, "__name__": true, "alertstate": true, "endpoint": true, "container": true, "namespace": true, "service": true, "pod": true, "prometheus": true }, "indexByName": { "alertname": 0, "severity": 1, "instance": 2, "job": 3 } } }
+      ],
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": [
+          {
+            "matcher": { "id": "byName", "options": "severity" },
+            "properties": [ { "id": "custom.cellOptions", "value": { "type": "color-background" } }, { "id": "mappings", "value": [ { "type": "value", "options": { "critical": { "color": "red", "index": 0 }, "warning": { "color": "orange", "index": 1 }, "none": { "color": "blue", "index": 2 } } } ] } ]
+          }
+        ]
+      },
+      "options": { "sortBy": [ { "displayName": "severity", "desc": false } ] }
+    }
+  ]
+}
