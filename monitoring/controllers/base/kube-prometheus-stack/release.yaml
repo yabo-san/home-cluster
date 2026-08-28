@@ -206,3 +206,24 @@ spec:
               - targets: ["192.168.4.66:9633"]
                 labels:
                   instance: gooselab
+          # Synthetic / blackbox monitoring — probe the user-facing URLs from the cluster.
+          # up/down (probe_success), latency (probe_duration_seconds), TLS cert expiry.
+          - job_name: blackbox-http
+            metrics_path: /probe
+            params:
+              module: [http_up]
+            static_configs:
+              - targets:
+                  - https://watch.gonse.org
+                  - https://request.gonse.org
+                  - https://monitoring.y4bo.com
+                  - https://id.y4bo.com
+                  - https://login.y4bo.com
+                  - https://audiobooks.y4bo.com
+            relabel_configs:
+              - source_labels: [__address__]
+                target_label: __param_target
+              - source_labels: [__param_target]
+                target_label: instance
+              - target_label: __address__
+                replacement: blackbox-exporter:9115

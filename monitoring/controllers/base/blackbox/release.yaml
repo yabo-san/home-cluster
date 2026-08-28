@@ -1,0 +1,39 @@
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: blackbox-exporter
+  namespace: monitoring
+spec:
+  interval: 30m
+  chart:
+    spec:
+      chart: prometheus-blackbox-exporter
+      version: "11.17.2"
+      sourceRef:
+        kind: HelmRepository
+        name: kube-prometheus-stack   # this repo points at prometheus-community charts
+        namespace: monitoring
+      interval: 12h
+  values:
+    fullnameOverride: blackbox-exporter   # stable service name: blackbox-exporter:9115
+    resources:
+      requests:
+        cpu: 25m
+        memory: 32Mi
+      limits:
+        memory: 64Mi
+    serviceMonitor:
+      enabled: false   # scraped via additionalScrapeConfigs (the /probe relabel pattern)
+    config:
+      modules:
+        # "up" = the origin gave a real HTTP response over TLS. Auth-gated services
+        # answer 302/401/403 and are still UP; only 5xx or no-response counts as down.
+        http_up:
+          prober: http
+          timeout: 8s
+          http:
+            method: GET
+            follow_redirects: true
+            preferred_ip_protocol: ip4
+            valid_status_codes: [200, 204, 301, 302, 303, 307, 308, 401, 403]
+            fail_if_not_ssl: true   # require HTTPS → also yields cert-expiry metrics
