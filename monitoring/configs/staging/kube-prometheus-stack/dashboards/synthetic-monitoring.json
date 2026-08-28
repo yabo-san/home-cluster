@@ -1,0 +1,73 @@
+{
+  "annotations": { "list": [] },
+  "editable": true,
+  "time": { "from": "now-6h", "to": "now" },
+  "refresh": "1m",
+  "schemaVersion": 39,
+  "tags": ["synthetic", "uptime"],
+  "title": "Synthetic Monitoring",
+  "uid": "synthetic-monitoring",
+  "templating": {
+    "list": [
+      { "name": "datasource", "type": "datasource", "query": "prometheus", "current": {}, "hide": 0, "refresh": 1 }
+    ]
+  },
+  "panels": [
+    {
+      "type": "row", "title": "Availability", "gridPos": { "h": 1, "w": 24, "x": 0, "y": 0 }, "collapsed": false, "panels": []
+    },
+    {
+      "type": "stat",
+      "title": "Service status (synthetic probe)",
+      "description": "UP = the service answered over HTTPS from outside the cluster. DOWN = 5xx / no response.",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 7, "w": 24, "x": 0, "y": 1 },
+      "targets": [
+        { "refId": "A", "expr": "probe_success{job=\"blackbox-http\"}", "legendFormat": "{{instance}}", "instant": true }
+      ],
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "background", "textMode": "value_and_name", "orientation": "horizontal" },
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [ { "type": "value", "options": { "0": { "text": "DOWN", "color": "red" }, "1": { "text": "UP", "color": "green" } } } ],
+          "thresholds": { "mode": "absolute", "steps": [ { "value": null, "color": "red" }, { "value": 1, "color": "green" } ] }
+        }
+      }
+    },
+    {
+      "type": "row", "title": "Latency & TLS", "gridPos": { "h": 1, "w": 24, "x": 0, "y": 8 }, "collapsed": false, "panels": []
+    },
+    {
+      "type": "timeseries",
+      "title": "Response time",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 9, "w": 16, "x": 0, "y": 9 },
+      "targets": [
+        { "refId": "A", "expr": "probe_duration_seconds{job=\"blackbox-http\"}", "legendFormat": "{{instance}}" }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "custom": { "drawStyle": "line", "fillOpacity": 10, "lineWidth": 2 },
+          "thresholds": { "mode": "absolute", "steps": [ { "value": null, "color": "green" }, { "value": 3, "color": "red" } ] }
+        }
+      },
+      "options": { "legend": { "displayMode": "table", "placement": "bottom", "calcs": ["lastNotNull", "max"] }, "tooltip": { "mode": "multi" } }
+    },
+    {
+      "type": "bargauge",
+      "title": "TLS cert — days until expiry",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 9, "w": 8, "x": 16, "y": 9 },
+      "targets": [
+        { "refId": "A", "expr": "(probe_ssl_earliest_cert_expiry{job=\"blackbox-http\"} - time()) / 86400", "legendFormat": "{{instance}}", "instant": true }
+      ],
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "orientation": "horizontal", "displayMode": "gradient" },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "d", "min": 0, "max": 90,
+          "thresholds": { "mode": "absolute", "steps": [ { "value": null, "color": "red" }, { "value": 14, "color": "yellow" }, { "value": 30, "color": "green" } ] }
+        }
+      }
+    }
+  ]
+}

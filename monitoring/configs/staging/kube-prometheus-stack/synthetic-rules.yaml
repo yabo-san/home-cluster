@@ -1,0 +1,39 @@
+# Synthetic-monitoring alerts on the blackbox probes. Tuned: we do NOT alert on the
+# decommissioned audiobooks endpoint (retired service = not an incident).
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: synthetic-monitoring
+  namespace: monitoring
+  labels:
+    role: alert-rules
+spec:
+  groups:
+    - name: synthetic-monitoring
+      rules:
+        - alert: ServiceDown
+          # audiobooks.y4bo.com is a DECOMMISSIONED service (orphan Cloudflare tunnel,
+          # returns 530). Excluded so we don't alert forever on something we retired —
+          # the real fix is removing that tunnel/DNS, then dropping this exclusion.
+          expr: probe_success{job="blackbox-http", instance!="https://audiobooks.y4bo.com"} == 0
+          for: 3m
+          labels:
+            severity: critical
+          annotations:
+            summary: "{{ $labels.instance }} is DOWN — synthetic probe failing for 3m"
+            runbook: "Check the service and its Cloudflare tunnel. HTTP 530 = tunnel origin unreachable; 5xx = app error; timeout = network."
+        - alert: TLSCertExpiringSoon
+          expr: (probe_ssl_earliest_cert_expiry{job="blackbox-http"} - time()) / 86400 < 14
+          for: 1h
+          labels:
+            severity: warning
+          annotations:
+            summary: "{{ $labels.instance }} TLS certificate expires in under 14 days"
+            runbook: "Cloudflare manages edge certs automatically; if this fires, inspect the tunnel/edge certificate."
+        - alert: ServiceSlow
+          expr: probe_duration_seconds{job="blackbox-http"} > 3
+          for: 10m
+          labels:
+            severity: warning
+          annotations:
+            summary: "{{ $labels.instance }} responding slowly (> 3s sustained for 10m)"
