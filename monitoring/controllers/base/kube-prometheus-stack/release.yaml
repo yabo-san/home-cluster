@@ -40,15 +40,9 @@ spec:
       # OIDC client secret arrives as GF_AUTH_GENERIC_OAUTH_CLIENT_SECRET (env),
       # from the SOPS'd grafana-oidc secret — kept out of this plaintext values file.
       envFromSecret: grafana-oidc
-      # Loki datasource — logs pillar, same Grafana pane as metrics.
-      additionalDataSources:
-        - name: Loki
-          type: loki
-          uid: loki
-          access: proxy
-          url: http://loki-stack.monitoring.svc.cluster.local:3100
-          jsonData:
-            maxLines: 1000
+      # NOTE: no Loki datasource here — the loki-stack chart already provisions one
+      # via a grafana_datasource-labeled ConfigMap the sidecar loads. Defining a second
+      # "Loki" here collided (duplicate datasource name). One source of truth.
       # Hide the chart's ~20 stock dashboards (many read No-data on k3s). The sidecar
       # still loads OUR configmaps (Homelab Overview, Node Exporter Full, Namespaces).
       defaultDashboardsEnabled: false
