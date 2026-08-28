@@ -53,6 +53,22 @@
         ]
       },
       "options": { "sortBy": [ { "displayName": "severity", "desc": false } ] }
+    },
+    {
+      "type": "alertlist",
+      "title": "Alerts — readable view (name + summary, from Alertmanager)",
+      "datasource": { "type": "alertmanager", "uid": "alertmanager" },
+      "gridPos": { "h": 12, "w": 24, "x": 0, "y": 22 },
+      "options": {
+        "viewMode": "list",
+        "groupMode": "default",
+        "maxItems": 50,
+        "sortOrder": 3,
+        "dashboardAlerts": false,
+        "alertName": "",
+        "alertInstanceLabelFilter": "",
+        "stateFilter": { "firing": true, "pending": true, "normal": false, "error": true, "noData": true }
+      }
     }
   ]
 }
