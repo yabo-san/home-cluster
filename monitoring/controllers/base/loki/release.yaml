@@ -25,6 +25,11 @@ spec:
     # this node (~200Mi). Promtail (bundled) tails every pod's logs into it.
     loki:
       enabled: true
+      # Prometheus stays the default datasource, not Loki. Fixed uid so Explore links
+      # and any Loki dashboards resolve deterministically.
+      isDefault: false
+      datasource:
+        uid: loki
       persistence:
         enabled: true
         storageClassName: longhorn
