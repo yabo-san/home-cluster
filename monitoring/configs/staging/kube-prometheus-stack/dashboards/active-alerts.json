@@ -17,7 +17,7 @@
       "type": "stat", "title": "Firing now",
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
       "gridPos": { "h": 4, "w": 4, "x": 0, "y": 0 },
-      "targets": [ { "refId": "A", "expr": "count(ALERTS{alertstate=\"firing\"}) or vector(0)", "instant": true } ],
+      "targets": [ { "refId": "A", "expr": "count(ALERTS{alertstate=\"firing\", severity=~\"warning|critical\"}) or vector(0)", "instant": true } ],
       "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "background", "graphMode": "area" },
       "fieldConfig": { "defaults": { "thresholds": { "mode": "absolute", "steps": [ { "value": null, "color": "green" }, { "value": 1, "color": "orange" } ] } } }
     },
@@ -42,7 +42,7 @@
       "title": "Firing alerts over time (by severity)",
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
       "gridPos": { "h": 8, "w": 12, "x": 0, "y": 4 },
-      "targets": [ { "refId": "A", "expr": "sum by (severity) (ALERTS{alertstate=\"firing\"})", "legendFormat": "{{severity}}" } ],
+      "targets": [ { "refId": "A", "expr": "sum by (severity) (ALERTS{alertstate=\"firing\", severity=~\"warning|critical\"})", "legendFormat": "{{severity}}" } ],
       "fieldConfig": {
         "defaults": { "custom": { "drawStyle": "line", "fillOpacity": 25, "lineWidth": 2, "stacking": { "mode": "normal" }, "showPoints": "never" }, "min": 0 },
         "overrides": [
@@ -58,7 +58,7 @@
       "title": "When each alert was active",
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
       "gridPos": { "h": 8, "w": 12, "x": 0, "y": 12 },
-      "targets": [ { "refId": "A", "expr": "ALERTS{alertstate=\"firing\"}", "legendFormat": "{{alertname}} · {{severity}}" } ],
+      "targets": [ { "refId": "A", "expr": "ALERTS{alertstate=\"firing\", severity=~\"warning|critical\"}", "legendFormat": "{{alertname}} · {{severity}}" } ],
       "fieldConfig": {
         "defaults": {
           "custom": { "fillOpacity": 80, "lineWidth": 0 },
@@ -73,7 +73,7 @@
       "title": "Firing alerts — details (host / node / namespace / pod)",
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
       "gridPos": { "h": 12, "w": 12, "x": 0, "y": 20 },
-      "targets": [ { "refId": "A", "expr": "ALERTS{alertstate=\"firing\"}", "instant": true, "format": "table" } ],
+      "targets": [ { "refId": "A", "expr": "ALERTS{alertstate=\"firing\", severity=~\"warning|critical\"}", "instant": true, "format": "table" } ],
       "transformations": [
         { "id": "organize", "options": {
           "excludeByName": { "Time": true, "Value": true, "__name__": true, "alertstate": true, "prometheus": true, "endpoint": true, "container": true },
@@ -95,7 +95,7 @@
       "gridPos": { "h": 28, "w": 12, "x": 12, "y": 4 },
       "options": {
         "viewMode": "list", "groupMode": "default", "maxItems": 50, "sortOrder": 3,
-        "dashboardAlerts": false, "alertName": "", "alertInstanceLabelFilter": "",
+        "dashboardAlerts": false, "alertName": "", "alertInstanceLabelFilter": "{severity=~\"warning|critical\"}",
         "stateFilter": { "firing": true, "pending": true, "normal": false, "error": true, "noData": true }
       }
     }
