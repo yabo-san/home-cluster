@@ -5,7 +5,7 @@
   "refresh": "30s",
   "schemaVersion": 39,
   "tags": ["logs"],
-  "title": "Cluster Logs",
+  "title": "Log Explorer",
   "uid": "cluster-logs",
   "templating": {
     "list": [
@@ -15,10 +15,38 @@
         "type": "query",
         "datasource": { "type": "loki", "uid": "loki" },
         "query": "label_values(namespace)",
+        "multi": true,
         "includeAll": true,
         "allValue": ".+",
         "current": { "text": "All", "value": "$__all" },
         "refresh": 2
+      },
+      {
+        "name": "pod",
+        "label": "Pod",
+        "type": "query",
+        "datasource": { "type": "loki", "uid": "loki" },
+        "query": "label_values({namespace=~\"$namespace\"}, pod)",
+        "multi": true,
+        "includeAll": true,
+        "allValue": ".+",
+        "current": { "text": "All", "value": "$__all" },
+        "refresh": 2
+      },
+      {
+        "name": "level",
+        "label": "Level",
+        "type": "custom",
+        "query": "All : .+, error : error, warn : warn, info : info, debug : debug",
+        "options": [
+          { "text": "All", "value": ".+", "selected": true },
+          { "text": "error", "value": "error", "selected": false },
+          { "text": "warn", "value": "warn", "selected": false },
+          { "text": "info", "value": "info", "selected": false },
+          { "text": "debug", "value": "debug", "selected": false }
+        ],
+        "current": { "text": "All", "value": ".+" },
+        "includeAll": false
       },
       {
         "name": "search",
@@ -30,25 +58,47 @@
   },
   "panels": [
     {
-      "type": "logs",
-      "title": "Logs — namespace=$namespace  ${search:text}",
+      "type": "timeseries",
+      "title": "Log volume by namespace",
       "datasource": { "type": "loki", "uid": "loki" },
-      "gridPos": { "h": 27, "w": 24, "x": 0, "y": 0 },
+      "gridPos": { "h": 6, "w": 24, "x": 0, "y": 0 },
       "targets": [
         {
           "refId": "A",
           "datasource": { "type": "loki", "uid": "loki" },
-          "expr": "{namespace=~\"$namespace\"} |~ \"(?i)$search\""
+          "expr": "sum by (namespace) (count_over_time({namespace=~\"$namespace\", pod=~\"$pod\"} |~ \"(?i)$level\" |~ \"(?i)$search\" [$__interval]))",
+          "legendFormat": "{{namespace}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": { "drawStyle": "bars", "fillOpacity": 70, "stacking": { "mode": "normal" }, "lineWidth": 0 },
+          "color": { "mode": "palette-classic" }
+        }
+      },
+      "options": { "legend": { "displayMode": "list", "placement": "bottom" }, "tooltip": { "mode": "multi" } }
+    },
+    {
+      "type": "logs",
+      "title": "Logs — ns=$namespace · pod=$pod · level=$level · search=\"${search:text}\"",
+      "datasource": { "type": "loki", "uid": "loki" },
+      "gridPos": { "h": 22, "w": 24, "x": 0, "y": 6 },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "loki", "uid": "loki" },
+          "expr": "{namespace=~\"$namespace\", pod=~\"$pod\"} |~ \"(?i)$level\" |~ \"(?i)$search\""
         }
       ],
       "options": {
         "showTime": true,
         "showLabels": false,
+        "showCommonLabels": false,
         "wrapLogMessage": true,
+        "prettifyLogMessage": true,
         "enableLogDetails": true,
         "dedupStrategy": "none",
-        "sortOrder": "Descending",
-        "prettifyLogMessage": false
+        "sortOrder": "Descending"
       }
     }
   ]
