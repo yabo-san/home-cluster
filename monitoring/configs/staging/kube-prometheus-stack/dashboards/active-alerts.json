@@ -14,28 +14,65 @@
   },
   "panels": [
     {
-      "type": "stat",
-      "title": "Firing now",
+      "type": "stat", "title": "Firing now",
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "gridPos": { "h": 4, "w": 6, "x": 0, "y": 0 },
-      "targets": [ { "refId": "A", "expr": "count(ALERTS{alertstate=\"firing\"})", "instant": true } ],
-      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "background", "graphMode": "none" },
+      "gridPos": { "h": 4, "w": 4, "x": 0, "y": 0 },
+      "targets": [ { "refId": "A", "expr": "count(ALERTS{alertstate=\"firing\"}) or vector(0)", "instant": true } ],
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "background", "graphMode": "area" },
       "fieldConfig": { "defaults": { "thresholds": { "mode": "absolute", "steps": [ { "value": null, "color": "green" }, { "value": 1, "color": "orange" } ] } } }
     },
     {
-      "type": "stat",
-      "title": "Pending",
+      "type": "stat", "title": "Critical",
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "gridPos": { "h": 4, "w": 6, "x": 6, "y": 0 },
+      "gridPos": { "h": 4, "w": 4, "x": 4, "y": 0 },
+      "targets": [ { "refId": "A", "expr": "count(ALERTS{alertstate=\"firing\", severity=\"critical\"}) or vector(0)", "instant": true } ],
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "background", "graphMode": "none" },
+      "fieldConfig": { "defaults": { "thresholds": { "mode": "absolute", "steps": [ { "value": null, "color": "green" }, { "value": 1, "color": "red" } ] } } }
+    },
+    {
+      "type": "stat", "title": "Pending",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 4, "w": 4, "x": 8, "y": 0 },
       "targets": [ { "refId": "A", "expr": "count(ALERTS{alertstate=\"pending\"}) or vector(0)", "instant": true } ],
       "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "background", "graphMode": "none" },
       "fieldConfig": { "defaults": { "thresholds": { "mode": "absolute", "steps": [ { "value": null, "color": "green" }, { "value": 1, "color": "yellow" } ] } } }
     },
     {
-      "type": "table",
-      "title": "Firing alerts",
+      "type": "timeseries",
+      "title": "Firing alerts over time (by severity)",
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "gridPos": { "h": 18, "w": 24, "x": 0, "y": 4 },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 4 },
+      "targets": [ { "refId": "A", "expr": "sum by (severity) (ALERTS{alertstate=\"firing\"})", "legendFormat": "{{severity}}" } ],
+      "fieldConfig": {
+        "defaults": { "custom": { "drawStyle": "line", "fillOpacity": 25, "lineWidth": 2, "stacking": { "mode": "normal" }, "showPoints": "never" }, "min": 0 },
+        "overrides": [
+          { "matcher": { "id": "byName", "options": "critical" }, "properties": [ { "id": "color", "value": { "mode": "fixed", "fixedColor": "red" } } ] },
+          { "matcher": { "id": "byName", "options": "warning" }, "properties": [ { "id": "color", "value": { "mode": "fixed", "fixedColor": "orange" } } ] },
+          { "matcher": { "id": "byName", "options": "none" }, "properties": [ { "id": "color", "value": { "mode": "fixed", "fixedColor": "blue" } } ] }
+        ]
+      },
+      "options": { "legend": { "displayMode": "list", "placement": "bottom" }, "tooltip": { "mode": "multi" } }
+    },
+    {
+      "type": "state-timeline",
+      "title": "When each alert was active",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 12 },
+      "targets": [ { "refId": "A", "expr": "ALERTS{alertstate=\"firing\"}", "legendFormat": "{{alertname}} · {{severity}}" } ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": { "fillOpacity": 80, "lineWidth": 0 },
+          "mappings": [ { "type": "value", "options": { "1": { "text": "firing", "color": "red", "index": 0 } } } ],
+          "thresholds": { "mode": "absolute", "steps": [ { "value": null, "color": "red" } ] }
+        }
+      },
+      "options": { "mergeValues": true, "showValue": "never", "rowHeight": 0.9, "legend": { "displayMode": "list", "placement": "bottom" } }
+    },
+    {
+      "type": "table",
+      "title": "Firing alerts — details (host / node / namespace / pod)",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 12, "w": 12, "x": 0, "y": 20 },
       "targets": [ { "refId": "A", "expr": "ALERTS{alertstate=\"firing\"}", "instant": true, "format": "table" } ],
       "transformations": [
         { "id": "organize", "options": {
@@ -46,27 +83,19 @@
       "fieldConfig": {
         "defaults": {},
         "overrides": [
-          {
-            "matcher": { "id": "byName", "options": "severity" },
-            "properties": [ { "id": "custom.cellOptions", "value": { "type": "color-background" } }, { "id": "mappings", "value": [ { "type": "value", "options": { "critical": { "color": "red", "index": 0 }, "warning": { "color": "orange", "index": 1 }, "none": { "color": "blue", "index": 2 } } } ] } ]
-          }
+          { "matcher": { "id": "byName", "options": "severity" }, "properties": [ { "id": "custom.cellOptions", "value": { "type": "color-background" } }, { "id": "mappings", "value": [ { "type": "value", "options": { "critical": { "color": "red", "index": 0 }, "warning": { "color": "orange", "index": 1 }, "none": { "color": "blue", "index": 2 } } } ] } ] }
         ]
       },
       "options": { "sortBy": [ { "displayName": "severity", "desc": false } ] }
     },
     {
       "type": "alertlist",
-      "title": "Alerts — readable view (name + summary, from Alertmanager)",
+      "title": "Incidents (name + summary, from Alertmanager)",
       "datasource": { "type": "alertmanager", "uid": "alertmanager" },
-      "gridPos": { "h": 12, "w": 24, "x": 0, "y": 22 },
+      "gridPos": { "h": 28, "w": 12, "x": 12, "y": 4 },
       "options": {
-        "viewMode": "list",
-        "groupMode": "default",
-        "maxItems": 50,
-        "sortOrder": 3,
-        "dashboardAlerts": false,
-        "alertName": "",
-        "alertInstanceLabelFilter": "",
+        "viewMode": "list", "groupMode": "default", "maxItems": 50, "sortOrder": 3,
+        "dashboardAlerts": false, "alertName": "", "alertInstanceLabelFilter": "",
         "stateFilter": { "firing": true, "pending": true, "normal": false, "error": true, "noData": true }
       }
     }
