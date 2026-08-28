@@ -29,6 +29,13 @@ spec:
         target:
           kind: PrometheusRule
   values:
+    # added bc k3s sends junk
+    kubeControllerManager:
+      enabled: false
+    kubeScheduler:
+      enabled: false
+    kubeProxy:
+      enabled: false 
     grafana:
       # Was `adminPassword: password` (public repo!). Now sourced from a SOPS'd
       # secret so the tunnel can't expose an admin/password login. Create the
