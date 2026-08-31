@@ -49,9 +49,9 @@ configMapGenerator:
     options:
       labels:
         grafana_dashboard: "1"
-  - name: grafana-dashboard-jellyfin-apm
+  - name: grafana-dashboard-jellyfin-simple
     files:
-      - dashboards/jellyfin-apm.json
+      - dashboards/jellyfin-simple.json
     options:
       labels:
         grafana_dashboard: "1"
