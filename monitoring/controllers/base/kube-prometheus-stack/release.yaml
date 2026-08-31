@@ -209,7 +209,7 @@ spec:
           smtp_auth_password_file: /etc/alertmanager/secrets/grafana-smtp/GF_SMTP_PASSWORD
           smtp_require_tls: true
         route:
-          receiver: email
+          receiver: "null"
           group_by: ["alertname", "instance"]
           group_wait: 30s
           group_interval: 5m
