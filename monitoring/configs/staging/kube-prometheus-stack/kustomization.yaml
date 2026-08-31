@@ -8,6 +8,7 @@ resources:
   - grafana-smtp-secret.yaml
   - homelab-storage-rules.yaml
   - synthetic-rules.yaml
+  - jellyfin-rules.yaml
   - loki-datasource.yaml
 # Dashboards: any ConfigMap labeled grafana_dashboard=1 in the monitoring namespace
 # is auto-loaded by Grafana's sidecar. Drop more .json files here + list them below.
@@ -45,6 +46,12 @@ configMapGenerator:
   - name: grafana-dashboard-active-alerts
     files:
       - dashboards/active-alerts.json
+    options:
+      labels:
+        grafana_dashboard: "1"
+  - name: grafana-dashboard-jellyfin-apm
+    files:
+      - dashboards/jellyfin-apm.json
     options:
       labels:
         grafana_dashboard: "1"

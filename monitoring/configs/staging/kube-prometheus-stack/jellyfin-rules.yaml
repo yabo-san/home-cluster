@@ -1,0 +1,66 @@
+# Jellyfin APM alerts, from its built-in Prometheus endpoint (job="jellyfin").
+# Tuning notes are the point of this file:
+#  - User-facing "is it down" is ALREADY covered by ServiceDown (blackbox on watch.gonse.org,
+#    critical). So nothing here is critical — these are the "why" layer behind that page.
+#  - Ratios carry a minimum-traffic guard. 1 error out of 2 requests is 50% and means nothing;
+#    without the guard a quiet night would page on a single failed image fetch.
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: jellyfin-apm
+  namespace: monitoring
+  labels:
+    role: alert-rules
+spec:
+  groups:
+    - name: jellyfin-apm
+      rules:
+        - alert: JellyfinMetricsDown
+          # The process (or its LAN path) is gone. Warning, not critical: if users are
+          # affected, ServiceDown fires and inhibits this one (same instance label).
+          expr: up{job="jellyfin"} == 0
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: "Jellyfin metrics endpoint unreachable for 5m ({{ $labels.instance }})"
+            runbook: "On gooselab: systemctl status jellyfin; curl localhost:8096/metrics. If local works but scrape fails, it's the LAN/firewall path from the cluster."
+
+        - alert: JellyfinHighErrorRate
+          # >5% of requests 5xx over 5m, only when there's real traffic (>= 0.2 req/s ≈ 12 rpm).
+          expr: |
+            (
+              sum(rate(http_requests_received_total{job="jellyfin",code=~"5.."}[5m]))
+              /
+              sum(rate(http_requests_received_total{job="jellyfin"}[5m]))
+            ) > 0.05
+            and
+            sum(rate(http_requests_received_total{job="jellyfin"}[5m])) > 0.2
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: "Jellyfin 5xx rate {{ $value | humanizePercentage }} over the last 5m"
+            runbook: "Open the Jellyfin APM dashboard → Transactions table: which endpoint/controller is failing? Then Log Explorer for the matching window. Common: DB locked, transcode temp path full, plugin exception."
+
+        - alert: JellyfinSlowResponses
+          # p95 over 3s for 10m. Image endpoints are naturally slower than JSON APIs, so this is
+          # an aggregate "the app is dragging" signal, not a per-endpoint SLO. Tune after a week.
+          expr: histogram_quantile(0.95, sum by (le) (rate(http_request_duration_seconds_bucket{job="jellyfin"}[5m]))) > 3
+          for: 10m
+          labels:
+            severity: warning
+          annotations:
+            summary: "Jellyfin p95 response time {{ $value | humanizeDuration }} for 10m"
+            runbook: "Check GC pause ratio and thread-pool queue on the APM dashboard (runtime pressure) vs gooselab disk/CPU on Homelab Overview (host pressure)."
+
+        - alert: JellyfinGCThrashing
+          # .NET spending >20% of wall time in garbage collection = memory pressure, precedes
+          # latency and OOM. Classic APM signal that host-level metrics never show.
+          expr: dotnet_gc_pause_ratio{job="jellyfin"} > 0.2
+          for: 15m
+          labels:
+            severity: warning
+          annotations:
+            summary: "Jellyfin spending {{ $value | humanizePercentage }} of time in GC for 15m"
+            runbook: "Look at GC heap size trend and exceptions/s on the APM dashboard. Sustained growth = leak (restart buys time, plugin audit fixes it); flat-but-high = box needs RAM headroom."
