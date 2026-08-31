@@ -248,6 +248,13 @@ spec:
               - targets: ["192.168.4.66:9633"]
                 labels:
                   instance: gooselab
+          - job_name: jellyfin
+            metrics_path: /metrics
+            static_configs:
+              - targets: ["192.168.4.66:8096"]
+                labels:
+                  instance: gooselab
+                  app: jellyfin
           # Synthetic / blackbox monitoring — probe the user-facing URLs from the cluster.
           # up/down (probe_success), latency (probe_duration_seconds), TLS cert expiry.
           - job_name: blackbox-http
