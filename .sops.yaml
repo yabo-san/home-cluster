@@ -1,0 +1,9 @@
+creation_rules:
+  - path_regex: .*.yaml
+    encrypted_regex: ^(data|stringData)$
+    # Single recipient: our own key, the one Flux holds in the sops-age Secret
+    # in flux-system. The KubeCraft lesson 16 example key was removed 2026-09-20;
+    # 9 files had been encrypted to a keypair we do not hold. Values were NOT
+    # re-encrypted, so git history still yields the same data key to that old
+    # key. The credentials behind these secrets still need reissuing.
+    age: age1a34pfsyga0gajdy85cqy6yv6ypyumyulwshgkgm9h69jhp25dqaq4gp87a
