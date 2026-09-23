@@ -1,0 +1,93 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: paperless
+  namespace: paperless
+spec:
+  replicas: 1
+  # Longhorn RWX + a single sqlite file: never run two writers at once.
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: paperless
+  template:
+    metadata:
+      labels:
+        app: paperless
+    spec:
+      # The image starts as root and drops to UID 1000 itself (gosu), so do NOT
+      # set runAsUser here. fsGroup is what makes the PVCs writable by that user.
+      # /mnt/media lives on thinkserver only. Without this the pod can land on
+      # workernode and quietly mount an empty local directory instead of the NAS.
+      nodeSelector:
+        kubernetes.io/hostname: thinkserver
+      securityContext:
+        fsGroup: 1000
+      containers:
+        - name: paperless
+          image: ghcr.io/paperless-ngx/paperless-ngx:2.13.5
+          ports:
+            - containerPort: 8000
+          env:
+            - name: PAPERLESS_REDIS
+              value: redis://paperless-redis:6379
+            # Must match the public URL or Django rejects logins with a CSRF error.
+            - name: PAPERLESS_URL
+              value: http://100.99.35.21:30080
+            - name: PAPERLESS_TIME_ZONE
+              value: America/Los_Angeles
+            - name: PAPERLESS_OCR_LANGUAGE
+              value: eng+spa
+            # Installs the Spanish tesseract pack at boot; without this, eng+spa fails.
+            - name: PAPERLESS_OCR_LANGUAGES
+              value: spa
+            - name: USERMAP_UID
+              value: "1000"
+            - name: USERMAP_GID
+              value: "1000"
+          envFrom:
+            - secretRef:
+                name: paperless-secret
+          volumeMounts:
+            - name: data
+              mountPath: /usr/src/paperless/data
+            - name: media
+              mountPath: /usr/src/paperless/media
+            - name: consume
+              mountPath: /usr/src/paperless/consume
+          # First boot runs migrations and installs the OCR pack, so give it room
+          # before the probes start killing it.
+          startupProbe:
+            httpGet:
+              path: /accounts/login/
+              port: 8000
+            failureThreshold: 60
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /accounts/login/
+              port: 8000
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /accounts/login/
+              port: 8000
+            periodSeconds: 30
+            failureThreshold: 3
+          resources:
+            requests:
+              cpu: 200m
+              memory: 512Mi
+            limits:
+              memory: 2Gi
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: paperless-data-pvc
+        - name: media
+          persistentVolumeClaim:
+            claimName: paperless-media-pvc
+        - name: consume
+          hostPath:
+            path: /mnt/media/scans

@@ -1,0 +1,29 @@
+# media = the actual scanned documents. This is the one that must never be lost.
+# data  = sqlite db + search index. Rebuildable from media, but slow.
+# consume is NOT a PVC: it is a hostPath onto the NAS at /mnt/media/scans,
+# so anything saved to the share is ingested automatically.
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: paperless-media-pvc
+  namespace: paperless
+spec:
+  accessModes:
+    - ReadWriteMany
+  storageClassName: longhorn-retain
+  resources:
+    requests:
+      storage: 20Gi
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: paperless-data-pvc
+  namespace: paperless
+spec:
+  accessModes:
+    - ReadWriteMany
+  storageClassName: longhorn-retain
+  resources:
+    requests:
+      storage: 5Gi
