@@ -18,6 +18,11 @@ spec:
     spec:
       # The image starts as root and drops to UID 1000 itself (gosu), so do NOT
       # set runAsUser here. fsGroup is what makes the PVCs writable by that user.
+      # Kubernetes injects PAPERLESS_PORT=tcp://<clusterip>:8000 for the Service
+      # named "paperless". paperless-ngx reads PAPERLESS_PORT as its own gunicorn
+      # bind port, gets a URL instead of a number, and crash-loops. Turning the
+      # legacy service links off kills that whole class of collision.
+      enableServiceLinks: false
       # /mnt/media lives on thinkserver only. Without this the pod can land on
       # workernode and quietly mount an empty local directory instead of the NAS.
       nodeSelector:
