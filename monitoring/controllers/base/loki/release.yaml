@@ -48,7 +48,7 @@ spec:
       replicas: 1
       persistence:
         enabled: true
-        storageClass: longhorn
+        storageClass: local-path
         size: 10Gi
       resources:
         requests:
