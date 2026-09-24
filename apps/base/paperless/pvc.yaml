@@ -22,7 +22,7 @@ metadata:
   namespace: paperless
 spec:
   accessModes:
-    - ReadWriteMany
+    - ReadWriteOnce
   storageClassName: local-path
   resources:
     requests:
