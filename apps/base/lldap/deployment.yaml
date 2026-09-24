@@ -1,0 +1,96 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: lldap
+  namespace: lldap
+spec:
+  replicas: 1
+  # One SQLite writer. Recreate, never RollingUpdate: a rolling update starts
+  # the new pod before the old one exits, and two processes opening the same
+  # SQLite file is how it gets corrupted. Same rule as paperless.
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: lldap
+  template:
+    metadata:
+      labels:
+        app: lldap
+    spec:
+      # PINNED, and this is not optional.
+      #
+      # local-path provisions a real directory on the disk of whichever node the
+      # pod first landed on -- there is no network storage layer any more, since
+      # Longhorn was removed in CHG0030418. The PersistentVolume that gets
+      # created carries nodeAffinity for that node.
+      #
+      # Without this line the pod is free to reschedule onto workernode, where
+      # that directory does not exist, and it would come up with an EMPTY
+      # database: no users, no groups, nobody can log into anything. It would
+      # look healthy while doing it.
+      #
+      # Pinning makes the constraint explicit rather than relying on the PV's
+      # affinity to enforce it after the fact.
+      nodeSelector:
+        kubernetes.io/hostname: thinkserver
+      # Kubernetes injects <NAME>_PORT env vars for every Service in the
+      # namespace, so a Service called "lldap" produces LLDAP_PORT=tcp://...
+      # LLDAP reads LLDAP_-prefixed variables as its own configuration. This is
+      # the exact collision that crash-looped paperless (PAPERLESS_PORT read as
+      # a bind port). Turned off so the class of bug cannot occur.
+      enableServiceLinks: false
+      securityContext:
+        # The image runs as uid 1000 and needs to own /data on first start.
+        fsGroup: 1000
+      containers:
+        - name: lldap
+          # Pinned. An LDAP server is not a thing to let float on :latest.
+          image: lldap/lldap:v0.6.3
+          ports:
+            - name: ldap
+              containerPort: 3890
+            - name: http
+              containerPort: 17170
+          env:
+            # The root of the directory tree. Every DN is relative to this, and
+            # it is baked into the Keycloak federation config and the Jellyfin
+            # LDAP plugin, so changing it later means reconfiguring both.
+            - name: LLDAP_LDAP_BASE_DN
+              value: dc=y4bo,dc=com
+            # The bootstrap admin account. Its password comes from the secret.
+            - name: LLDAP_LDAP_USER_DN
+              value: admin
+            - name: TZ
+              value: America/Los_Angeles
+          envFrom:
+            # JWT secret, key seed and the admin password. See secret.yaml.
+            - secretRef:
+                name: lldap-secrets
+          volumeMounts:
+            - name: data
+              mountPath: /data
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 17170
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 17170
+            periodSeconds: 30
+            failureThreshold: 3
+          resources:
+            requests:
+              cpu: 25m
+              memory: 64Mi
+            limits:
+              # A Rust binary serving SQLite. It does not need more, and a limit
+              # keeps it from being the thing that surprises a 7.4Gi node.
+              memory: 256Mi
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: lldap-data

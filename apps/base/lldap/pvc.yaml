@@ -1,0 +1,22 @@
+# LLDAP stores everything in a single SQLite file: users, groups, password
+# hashes, and the JWT blacklist. A few hundred users is measured in kilobytes,
+# hence 1Gi rather than anything considered.
+#
+# ReadWriteOnce, not RWX: one writer, and local-path cannot do RWX anyway
+# (NodePath only supports RWO/RWOP -- the failure that stalled paperless in
+# CHG0030429).
+#
+# local-path provisions a directory on ONE node's disk. That is why the
+# Deployment is pinned; see the comment there.
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: lldap-data
+  namespace: lldap
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: local-path
+  resources:
+    requests:
+      storage: 1Gi

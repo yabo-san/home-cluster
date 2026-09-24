@@ -4,5 +4,6 @@ resources:
   # - linkding
   # - audiobookshelf   # decommissioned on the cluster — runs on nixland now
   - grafana-tunnel
+  - lldap
   - paperless
   - portal
