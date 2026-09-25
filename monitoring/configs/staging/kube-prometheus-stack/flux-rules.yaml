@@ -1,0 +1,58 @@
+# Flux reconciliation alerts. These measure whether a resource is HEALTHY, which is a
+# different question from whether the cluster is up.
+#
+# A Kustomization can report green while a HelmRelease beneath it has been failing
+# and rolling back for days: the Kustomization only tracks "applied", and the
+# HelmRelease carries its own Ready condition. Nothing here fired when that
+# happened, because the Flux controllers were not being scraped at all
+# (see flux-podmonitor.yaml). Every rule below is warning severity, which now
+# reaches email; before the Alertmanager route change, warning went to /dev/null.
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: flux
+  namespace: monitoring
+  labels:
+    role: alert-rules
+spec:
+  groups:
+    - name: flux
+      rules:
+        - alert: FluxHelmReleaseNotReady
+          expr: gotk_reconcile_condition{kind="HelmRelease", type="Ready", status="False"} == 1
+          for: 10m
+          labels:
+            severity: warning
+          annotations:
+            summary: "HelmRelease {{ $labels.namespace }}/{{ $labels.name }} not Ready for 10m"
+            description: "The parent Kustomization may still show green. Check: flux get helmreleases -A"
+
+        - alert: FluxKustomizationNotReady
+          expr: gotk_reconcile_condition{kind="Kustomization", type="Ready", status="False"} == 1
+          for: 10m
+          labels:
+            severity: warning
+          annotations:
+            summary: "Kustomization {{ $labels.namespace }}/{{ $labels.name }} not Ready for 10m"
+
+        - alert: FluxReconcileStalled
+          # Stalled is Flux giving up, not retrying. Stronger than NotReady and it
+          # never self-resolves without a change, so five minutes is plenty.
+          expr: gotk_reconcile_condition{type="Stalled", status="True"} == 1
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: "{{ $labels.kind }} {{ $labels.namespace }}/{{ $labels.name }} is Stalled"
+
+        - alert: FluxResourceSuspended
+          # A suspended resource is an alert silenced by another name: nothing
+          # reconciles it and nothing complains. Same failure shape as excluding a
+          # failing host from its own probe. An hour, so a deliberate short suspend
+          # during a change does not fire.
+          expr: gotk_suspend_status == 1
+          for: 1h
+          labels:
+            severity: warning
+          annotations:
+            summary: "{{ $labels.kind }} {{ $labels.namespace }}/{{ $labels.name }} suspended for over an hour"

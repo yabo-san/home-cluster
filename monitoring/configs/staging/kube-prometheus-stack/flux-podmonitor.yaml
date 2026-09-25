@@ -1,0 +1,31 @@
+# Scrape the Flux controllers. Without this, gotk_reconcile_condition is never
+# collected, so nothing can alert on a HelmRelease that has been rolling back for
+# days under a Kustomization that reports green. That exact case went unnoticed
+# for the better part of a week in 2026-09; the Kustomization measures "applied",
+# not "healthy", and only the HelmRelease's own Ready condition says which.
+apiVersion: monitoring.coreos.com/v1
+kind: PodMonitor
+metadata:
+  name: flux-system
+  namespace: flux-system
+  labels:
+    app.kubernetes.io/part-of: flux
+spec:
+  namespaceSelector:
+    matchNames:
+      - flux-system
+  selector:
+    matchExpressions:
+      - key: app
+        operator: In
+        values:
+          - helm-controller
+          - source-controller
+          - kustomize-controller
+          - notification-controller
+  podMetricsEndpoints:
+    - port: http-prom
+      relabelings:
+        - sourceLabels: [__meta_kubernetes_pod_phase]
+          action: keep
+          regex: Running

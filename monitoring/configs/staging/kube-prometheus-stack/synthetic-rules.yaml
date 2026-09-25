@@ -1,5 +1,6 @@
-# Synthetic-monitoring alerts on the blackbox probes. Tuned: we do NOT alert on the
-# decommissioned audiobooks endpoint (retired service = not an incident).
+# Synthetic-monitoring alerts on the blackbox probes. Every configured target is
+# alerted on: a dead target is removed from the probe list, never excluded here.
+# An exclusion silences an alert and is then forgotten; a removed target is gone.
 apiVersion: monitoring.coreos.com/v1
 kind: PrometheusRule
 metadata:
@@ -12,8 +13,6 @@ spec:
     - name: synthetic-monitoring
       rules:
         - alert: ServiceDown
-          # returns 530). Excluded so we don't alert forever on something we retired —
-          # the real fix is removing that tunnel/DNS, then dropping this exclusion.
           expr: probe_success{job="blackbox-http"} == 0
           for: 3m
           labels:

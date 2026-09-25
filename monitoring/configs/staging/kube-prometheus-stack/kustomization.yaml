@@ -8,6 +8,8 @@ resources:
   - grafana-smtp-secret.yaml
   - homelab-storage-rules.yaml
   - synthetic-rules.yaml
+  - flux-rules.yaml
+  - flux-podmonitor.yaml
   - jellyfin-rules.yaml
   - loki-datasource.yaml
   - tempo-datasource.yaml

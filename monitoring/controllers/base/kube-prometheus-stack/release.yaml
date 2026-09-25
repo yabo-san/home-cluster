@@ -219,6 +219,13 @@ spec:
               receiver: "null"
             - matchers: ['severity = "critical"']
               receiver: email
+            # Warnings were falling through to the "null" root receiver, so
+            # KubePodCrashLooping, KubeMemoryOvercommit and every custom rule at
+            # warning severity reached nobody. Same email, longer repeat interval
+            # so a warning cannot page every 4h the way a critical does.
+            - matchers: ['severity = "warning"']
+              receiver: email
+              repeat_interval: 24h
         receivers:
           - name: email
             email_configs:
@@ -235,6 +242,12 @@ spec:
         # rules), not just the chart's own release-labeled ones.
         ruleSelectorNilUsesHelmValues: false
         ruleNamespaceSelector: {}
+        # Same for PodMonitors. Without this the chart selects only its own
+        # release-labelled monitors, and a PodMonitor we add (flux-podmonitor.yaml)
+        # is applied, shows up in kubectl, and is never scraped. Applied is not
+        # collected.
+        podMonitorSelectorNilUsesHelmValues: false
+        podMonitorNamespaceSelector: {}
         # External static targets — gooselab (NixOS) exporters, reached over the LAN
         # (192.168.4.0/22). Pods can't route the tailnet (100.x), so scrape the LAN IP.
         additionalScrapeConfigs:
