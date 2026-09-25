@@ -52,16 +52,24 @@ spec:
           volumeMounts:
             - name: data
               mountPath: /var/lib/mysql
+          # Suspends liveness for 5min. Without it, liveness killed mariadb
+          # mid-init and left a half-migrated schema. INC in CHG0030426.
+          startupProbe:
+            exec:
+              command: ["healthcheck.sh", "--connect", "--innodb_initialized"]
+            failureThreshold: 30
+            periodSeconds: 10
           readinessProbe:
             exec:
               command: ["healthcheck.sh", "--connect", "--innodb_initialized"]
-            initialDelaySeconds: 15
             periodSeconds: 10
           livenessProbe:
             exec:
-              command: ["healthcheck.sh", "--connect", "--innodb_initialized"]
-            initialDelaySeconds: 60
+              # --connect only, not --innodb_initialized: slow InnoDB work is
+              # not a dead server.
+              command: ["healthcheck.sh", "--connect"]
             periodSeconds: 30
+            failureThreshold: 5
           resources:
             requests:
               cpu: 50m
