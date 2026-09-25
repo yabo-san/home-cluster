@@ -1,0 +1,89 @@
+# MariaDB for RomM only.
+#
+# Its own database rather than reusing Keycloak's Postgres: wrong engine, and an
+# identity provider's database should never be coupled to an application's.
+# Blast radius of one app.
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: romm-db
+  namespace: romm
+spec:
+  replicas: 1
+  # Recreate, never RollingUpdate. One writer to one data directory; a rolling
+  # update would start a second mariadb against the same files.
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: romm-db
+  template:
+    metadata:
+      labels:
+        app: romm-db
+    spec:
+      # local-path is node-local, so the data only exists here.
+      nodeSelector:
+        kubernetes.io/hostname: thinkserver
+      containers:
+        - name: mariadb
+          image: mariadb:11.4.13
+          args:
+            # CARRIED OVER FROM THE COMPOSE FILE, AND IT IS LOAD-BEARING.
+            # The original had MARIADB_EXTRA_FLAGS=--innodb-use-native-aio=0
+            # because the underlying volume does not support native async I/O.
+            # Drop it and mariadb fails to start with an InnoDB error that does
+            # not mention aio.
+            - --innodb-use-native-aio=0
+          env:
+            - name: MARIADB_DATABASE
+              value: romm
+            - name: MARIADB_USER
+              value: romm-user
+          envFrom:
+            # MARIADB_ROOT_PASSWORD and MARIADB_PASSWORD. The compose file carried
+            # the documentation defaults (changeme_romm, changeme_romm_root)
+            # unchanged; both are regenerated here.
+            - secretRef:
+                name: romm-secrets
+          ports:
+            - containerPort: 3306
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/mysql
+          readinessProbe:
+            exec:
+              command: ["healthcheck.sh", "--connect", "--innodb_initialized"]
+            initialDelaySeconds: 15
+            periodSeconds: 10
+          livenessProbe:
+            exec:
+              command: ["healthcheck.sh", "--connect", "--innodb_initialized"]
+            initialDelaySeconds: 60
+            periodSeconds: 30
+          resources:
+            requests:
+              cpu: 50m
+              memory: 256Mi
+            limits:
+              memory: 1Gi
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: romm-db
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: romm-db
+  namespace: romm
+spec:
+  # The name matters: RomM is configured with DB_HOST=romm-db, so this Service
+  # must carry exactly that name in this namespace.
+  type: ClusterIP
+  selector:
+    app: romm-db
+  ports:
+    - port: 3306
+      targetPort: 3306

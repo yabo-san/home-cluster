@@ -1,0 +1,36 @@
+# local-path, so node-local, so every pod that mounts these is pinned to
+# thinkserver by nodeSelector. Longhorn is gone as of CHG0030418 and local-path
+# is the only StorageClass left.
+#
+# The ROM files themselves are NOT here. They stay where they are on disk and are
+# mounted read-only as a hostPath. These claims hold only derived state: the scan
+# index, downloaded box art, and config.
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: romm-data
+  namespace: romm
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: local-path
+  resources:
+    requests:
+      # Box art and screenshots for a full library, fetched from IGDB. This is
+      # the claim that actually grows; everything else on it is small.
+      storage: 20Gi
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: romm-db
+  namespace: romm
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: local-path
+  resources:
+    requests:
+      # A metadata index over the library, not the library. Rows per ROM.
+      storage: 5Gi

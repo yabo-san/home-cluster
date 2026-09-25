@@ -7,3 +7,8 @@ resources:
   - lldap
   - paperless
   - portal
+  # romm: enabled 2026-09-25. Keycloak client `romm` created and its secret is in
+  # apps/staging/romm/secret.yaml; tunnel 47d0b5e1 created and its credentials are
+  # in apps/staging/romm/tunnel-secret.yaml. rom.y4bo.com CNAME exists in
+  # Cloudflare (created by `cloudflared tunnel route dns`), not declared here.
+  - romm

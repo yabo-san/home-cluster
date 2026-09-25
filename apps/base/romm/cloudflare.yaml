@@ -1,0 +1,97 @@
+# Cloudflare tunnel for rom.y4bo.com.
+#
+# Same pattern as apps/base/grafana-tunnel/ and apps/base/portal/: a cloudflared
+# Deployment in the app's own namespace, plus a ConfigMap holding the ingress
+# rules. One tunnel per app rather than one shared tunnel, so a change to one
+# hostname cannot take down the others.
+#
+# Note the estate has TWO ingress systems and they are not interchangeable:
+#   *.y4bo.com    -> Cloudflare tunnels out of this cluster (this file)
+#   *.gonse.org   -> Caddy on gooselab, goose's machine, his config
+#
+# ORDERING MATTERS FOR THIS ONE. Do not create the DNS record until the pod is
+# running with OIDC_ENABLED=true and the login has been verified. A public
+# hostname in front of an app that is not yet authenticating is a one-step
+# mistake that publishes the library.
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cloudflared
+  namespace: romm
+spec:
+  selector:
+    matchLabels:
+      app: cloudflared-romm
+  # Two replicas so a node drain or a pod restart does not drop the hostname.
+  replicas: 2
+  template:
+    metadata:
+      labels:
+        app: cloudflared-romm
+    spec:
+      containers:
+        - name: cloudflared
+          # Pinned, unlike the three existing tunnels which are still on :latest
+          # (that is CHG0030433, rescheduled). No reason to add a fourth.
+          image: cloudflare/cloudflared:2026.9.3
+          args:
+            - tunnel
+            - --config
+            - /etc/cloudflared/config/config.yaml
+            - run
+          livenessProbe:
+            httpGet:
+              path: /ready
+              port: 2000
+            failureThreshold: 1
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          resources:
+            requests:
+              cpu: 10m
+              memory: 32Mi
+            limits:
+              memory: 128Mi
+          volumeMounts:
+            - name: config
+              mountPath: /etc/cloudflared/config
+              readOnly: true
+            - name: creds
+              mountPath: /etc/cloudflared/creds
+              readOnly: true
+      volumes:
+        - name: creds
+          secret:
+            # From `cloudflared tunnel create romm`, which writes a
+            # credentials.json bound to the tunnel's UUID. That file becomes this
+            # secret, SOPS-encrypted in apps/staging/romm/.
+            secretName: tunnel-credentials
+        - name: config
+          configMap:
+            name: cloudflared
+            items:
+              - key: config.yaml
+                path: config.yaml
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: cloudflared
+  namespace: romm
+data:
+  config.yaml: |
+    # The tunnel NAME here is cosmetic. credentials.json is what actually binds
+    # this cloudflared to the Cloudflare tunnel, by UUID.
+    tunnel: romm
+    credentials-file: /etc/cloudflared/creds/credentials.json
+
+    metrics: 0.0.0.0:2000
+    no-autoupdate: true
+
+    ingress:
+    # Short service name works: the romm Service is in this namespace.
+    - hostname: rom.y4bo.com
+      service: http://romm:8080
+    # Catch-all, so anything else gets a 404 rather than leaking to a default.
+    - service: http_status:404

@@ -1,0 +1,146 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: romm
+  namespace: romm
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: romm
+  template:
+    metadata:
+      labels:
+        app: romm
+    spec:
+      # The ROM library is a hostPath on thinkserver. Scheduling anywhere else
+      # mounts an empty directory and presents as a healthy pod with no games.
+      nodeSelector:
+        kubernetes.io/hostname: thinkserver
+      # NOT OPTIONAL. Kubernetes injects <NAME>_PORT for every Service in the
+      # namespace, so a Service named `romm` sets ROMM_PORT=tcp://10.43.x.x:8080
+      # in this container. Apps that read <NAME>_PORT as their own config
+      # crash-loop on it. This is exactly what happened to paperless.
+      enableServiceLinks: false
+      containers:
+        - name: romm
+          # Pinned. The compose file used :latest, which Renovate cannot raise a
+          # PR for and which means the repo does not describe what is running.
+          image: rommapp/romm:5.3.1
+          ports:
+            - containerPort: 8080
+          env:
+            - name: DB_HOST
+              value: romm-db
+            - name: DB_NAME
+              value: romm
+            - name: DB_USER
+              value: romm-user
+
+            # Metadata sources. Hasheous needs no credentials; IGDB does and they
+            # come from the secret. ScreenScraper, RetroAchievements and
+            # SteamGridDB were all blank in the compose file and stay unset.
+            - name: HASHEOUS_API_ENABLED
+              value: "true"
+
+            # ---- Identity -------------------------------------------------
+            # This is the only thing between the public internet and the
+            # library, so it is enabled in the manifest rather than configured
+            # after the fact in a UI.
+            - name: OIDC_ENABLED
+              value: "true"
+            - name: OIDC_PROVIDER
+              value: keycloak
+            - name: OIDC_CLIENT_ID
+              value: romm
+            - name: OIDC_SERVER_APPLICATION_URL
+              value: https://id.y4bo.com/realms/y4bo
+            # No default in the app (backend/config/__init__.py:230), so it must
+            # be set. Read out of the source rather than guessed: auth_router
+            # mounts at prefix="/api" (backend/main.py:187) and the callback is
+            # @router.get("/oauth/openid") in backend/endpoints/auth.py.
+            # This string must match the Keycloak client's redirect URI exactly.
+            - name: OIDC_REDIRECT_URI
+              value: https://rom.y4bo.com/api/oauth/openid
+
+            # ---- Emulation, deliberately off ------------------------------
+            # The in-browser players are a GLOBAL switch, not a permission:
+            # DISABLE_EMULATOR_JS / DISABLE_RUFFLE_RS / DISABLE_JSDOS at
+            # backend/config/__init__.py:350-352. RomM has only two roles
+            # (user, admin) and no per-role player guard, so "admins may play,
+            # others may download" is not expressible.
+            #
+            # Off, because a play session is CPU on the same node as Keycloak,
+            # the media stack and this database, while a download is only
+            # bandwidth. One emulation session measured four cores on the
+            # equivalent workload. Twenty accounts able to start one is a
+            # self-inflicted noisy neighbour against the identity provider.
+            #
+            # Reversible: set these to "false" and restart.
+            - name: DISABLE_EMULATOR_JS
+              value: "true"
+            - name: DISABLE_RUFFLE_RS
+              value: "true"
+            - name: DISABLE_JSDOS
+              value: "true"
+
+            - name: TZ
+              value: America/Los_Angeles
+          envFrom:
+            # DB_PASSWD, ROMM_AUTH_SECRET_KEY, IGDB_CLIENT_ID,
+            # IGDB_CLIENT_SECRET, OIDC_CLIENT_SECRET.
+            #
+            # DISABLE_DOWNLOAD_ENDPOINT_AUTH is deliberately absent and must stay
+            # absent. Setting it true makes ROM downloads unauthenticated, which
+            # defeats the hostname entirely.
+            - secretRef:
+                name: romm-secrets
+          volumeMounts:
+            - name: data
+              mountPath: /romm/resources
+              subPath: resources
+            - name: data
+              mountPath: /romm/assets
+              subPath: assets
+            - name: data
+              mountPath: /romm/config
+              subPath: config
+            - name: data
+              mountPath: /redis-data
+              subPath: redis
+            - name: library
+              mountPath: /romm/library/roms
+              # READ ONLY. A scanner must never be able to reach the collection.
+              readOnly: true
+          startupProbe:
+            httpGet:
+              path: /api/heartbeat
+              port: 8080
+            failureThreshold: 30
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /api/heartbeat
+              port: 8080
+            periodSeconds: 15
+          resources:
+            requests:
+              cpu: 100m
+              memory: 512Mi
+            limits:
+              # thinkserver has 7.4Gi total and runs Keycloak on it. A scan of a
+              # large library is the memory-hungry phase; this bounds it.
+              memory: 2Gi
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: romm-data
+        - name: library
+          hostPath:
+            # The REAL path. /mnt/games is a symlink to /mnt/media/games, and a
+            # hostPath does follow it, but naming the target means a future
+            # rename of the symlink cannot silently empty the library.
+            path: /mnt/media/games/0 ROMS
+            type: Directory
