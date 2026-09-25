@@ -30,6 +30,25 @@ data:
             href: https://request.gonse.org
             description: Request something
             icon: jellyseerr.png
+    - Books:
+        - Kavita:
+            href: https://read.gonse.org
+            description: Books, comics & manga
+            icon: kavita.png
+    - Audiobooks:
+        - Audiobookshelf:
+            href: https://listen.gonse.org
+            description: Audiobooks & podcasts
+            icon: audiobookshelf.png
+    - Games:
+        - RomM:
+            href: https://rom.y4bo.com
+            description: Retro ROM library
+            icon: romm.png
+        - Drop:
+            href: https://gaben.y4bo.com
+            description: PC games
+            icon: steam.png
     # NOTE: everyone who logs in currently sees every tile, including Admin.
     # Grafana ITSELF enforces admin-vs-viewer via the Keycloak role mapping, so a
     # non-admin who clicks it lands as a read-only Viewer (not a security hole).
