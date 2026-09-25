@@ -1,25 +1,6 @@
-# TWO consumers in two different places, which is why this is not a plain
-# ClusterIP:
-#
-#   Keycloak  -- in this cluster. Reaches LDAP at
-#                lldap.lldap.svc.cluster.local:3890 over the ClusterIP.
-#
-#   Jellyfin  -- on gooselab, a DIFFERENT MACHINE on the same LAN
-#                (thinkserver 192.168.4.20, gooselab 192.168.4.70). It cannot
-#                resolve or route to a ClusterIP, which only exists inside the
-#                cluster network.
-#
-# externalIPs tells kube-proxy to also accept traffic addressed to 192.168.4.20
-# on these ports, so gooselab reaches ldap://192.168.4.20:3890 directly over the
-# LAN. No tunnel, no ingress, no public DNS.
-#
-# Why NOT NodePort: a NodePort listens on EVERY interface of EVERY node, which
-# would publish LDAP on the tailnet and on both nodes. externalIPs binds exactly
-# one address. Same reasoning as media-app in CHG0030419.
-#
-# Port 17170 (the admin web UI) is listed so it is reachable for
-# `kubectl port-forward`, and is deliberately NOT part of any ingress. User
-# administration happens over a port-forward, not over the network.
+# Not a plain ClusterIP: Jellyfin runs on another machine on the LAN and cannot
+# route to a ClusterIP. externalIPs binds exactly one address; a NodePort would
+# listen on every interface of every node.
 apiVersion: v1
 kind: Service
 metadata:

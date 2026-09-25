@@ -59,7 +59,7 @@ spec:
             - name: OIDC_REDIRECT_URI
               value: https://rom.y4bo.com/api/oauth/openid
             # The access gate. Default "true" auto-creates an account for any
-            # Keycloak user; accounts are created by hand instead. CHG0030426.
+            # Keycloak user; accounts are created by hand instead
             - name: OIDC_ALLOW_REGISTRATION
               value: "false"
             # Needs a groups claim mapper on the Keycloak client to do anything.
@@ -68,7 +68,7 @@ spec:
             - name: OIDC_ROLE_ADMIN
               value: platform-admin
 
-            # In-browser players. Global switches, not permissions. CHG0030426.
+            # In-browser players. Global switches, not permissions
             - name: DISABLE_EMULATOR_JS
               value: "true"
             - name: DISABLE_RUFFLE_RS

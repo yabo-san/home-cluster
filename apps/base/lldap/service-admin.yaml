@@ -1,21 +1,5 @@
-# A SECOND Service, for the admin web UI only, on the tailnet address.
-#
-# Why this exists as its own object instead of one more line on service.yaml:
-# externalIPs applies to the whole Service, so adding 100.99.35.21 there would
-# publish BOTH ports on the tailnet -- including 3890, raw LDAP with a cleartext
-# bind. Splitting it keeps LDAP on the LAN only, where its two consumers are:
-# Keycloak (in-cluster, via the ClusterIP) and Jellyfin (gooselab, 192.168.4.70).
-#
-# Who reaches what, after this:
-#
-#   goose      192.168.4.20:17170   -- LAN, he is in the same apartment as the box
-#   kevin      100.99.35.21:17170   -- tailnet, he is not
-#   Jellyfin   192.168.4.20:3890    -- LAN, unchanged
-#   Keycloak   lldap.lldap.svc:3890 -- in-cluster, unchanged
-#
-# This replaces `kubectl port-forward` for user administration, which was the one
-# piece of the onboarding loop that needed a terminal. Creating an account is now
-# a browser tab for either admin.
+# Admin web UI only, on the tailnet. Separate from service.yaml because
+# externalIPs applies to the whole Service, and LDAP must stay on the LAN.
 apiVersion: v1
 kind: Service
 metadata:

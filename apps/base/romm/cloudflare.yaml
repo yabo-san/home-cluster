@@ -32,8 +32,6 @@ spec:
     spec:
       containers:
         - name: cloudflared
-          # Pinned, unlike the three existing tunnels which are still on :latest
-          # (that is CHG0030433, rescheduled). No reason to add a fourth.
           image: cloudflare/cloudflared:2026.9.3
           args:
             - tunnel

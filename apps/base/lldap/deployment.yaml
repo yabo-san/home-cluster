@@ -18,27 +18,11 @@ spec:
       labels:
         app: lldap
     spec:
-      # PINNED, and this is not optional.
-      #
-      # local-path provisions a real directory on the disk of whichever node the
-      # pod first landed on -- there is no network storage layer any more, since
-      # Longhorn was removed in CHG0030418. The PersistentVolume that gets
-      # created carries nodeAffinity for that node.
-      #
-      # Without this line the pod is free to reschedule onto workernode, where
-      # that directory does not exist, and it would come up with an EMPTY
-      # database: no users, no groups, nobody can log into anything. It would
-      # look healthy while doing it.
-      #
-      # Pinning makes the constraint explicit rather than relying on the PV's
-      # affinity to enforce it after the fact.
+      # local-path is node-local, so the data only exists on this node.
       nodeSelector:
         kubernetes.io/hostname: thinkserver
-      # Kubernetes injects <NAME>_PORT env vars for every Service in the
-      # namespace, so a Service called "lldap" produces LLDAP_PORT=tcp://...
-      # LLDAP reads LLDAP_-prefixed variables as its own configuration. This is
-      # the exact collision that crash-looped paperless (PAPERLESS_PORT read as
-      # a bind port). Turned off so the class of bug cannot occur.
+      # A Service named "lldap" would inject LLDAP_PORT, which LLDAP reads as
+      # its own config.
       enableServiceLinks: false
       securityContext:
         # The image runs as uid 1000 and needs to own /data on first start.
@@ -53,9 +37,7 @@ spec:
             - name: http
               containerPort: 17170
           env:
-            # The root of the directory tree. Every DN is relative to this, and
-            # it is baked into the Keycloak federation config and the Jellyfin
-            # LDAP plugin, so changing it later means reconfiguring both.
+            # Baked into the Keycloak federation and the Jellyfin plugin.
             - name: LLDAP_LDAP_BASE_DN
               value: dc=y4bo,dc=com
             # The bootstrap admin account. Its password comes from the secret.

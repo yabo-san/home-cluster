@@ -39,7 +39,7 @@ spec:
             - name: data
               mountPath: /var/lib/postgresql/data
           # Suspends liveness while the cluster initialises. Without this the
-          # liveness probe can kill postgres mid-init. See CHG0030426.
+          # liveness probe can kill postgres mid-init. See
           startupProbe:
             exec:
               command: ["pg_isready", "-U", "drop", "-d", "drop"]

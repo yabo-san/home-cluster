@@ -1,0 +1,176 @@
+# Emails new LLDAP users a link to set their own password. Creating the user in
+# LLDAP is the only manual step; this handles everything after it.
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: keycloak-welcome-script
+  namespace: keycloak
+data:
+  welcome.py: |
+    #!/usr/bin/env python3
+    """Email a set-password link to any LLDAP user who has not had one."""
+    import json, os, sys, urllib.parse, urllib.request
+    from datetime import datetime, timezone
+
+    BASE     = os.environ["KC_URL"].rstrip("/")
+    REALM    = os.environ["KC_REALM"]
+    PROVIDER = os.environ["KC_LDAP_PROVIDER_ID"]
+    USER     = os.environ["KC_ADMIN_USER"]
+    PASS     = os.environ["KC_ADMIN_PASSWORD"]
+    REDIRECT = os.environ["KC_REDIRECT_URI"]
+    CLIENT   = os.environ.get("KC_REDIRECT_CLIENT", "account-console")
+    DRY      = os.environ.get("DRY_RUN", "false").lower() == "true"
+
+    # Never email these, whatever state they are in.
+    SKIP = {"admin", "service-account"}
+
+    def call(method, path, body=None, token=None, raw_query=""):
+        url = f"{BASE}{path}{raw_query}"
+        data = json.dumps(body).encode() if body is not None else None
+        req = urllib.request.Request(url, data=data, method=method)
+        if token:
+            req.add_header("Authorization", f"Bearer {token}")
+        if data is not None:
+            req.add_header("Content-Type", "application/json")
+        with urllib.request.urlopen(req, timeout=30) as r:
+            payload = r.read()
+            return json.loads(payload) if payload else None
+
+    def token():
+        body = urllib.parse.urlencode({
+            "client_id": "admin-cli", "grant_type": "password",
+            "username": USER, "password": PASS,
+        }).encode()
+        req = urllib.request.Request(
+            f"{BASE}/realms/master/protocol/openid-connect/token",
+            data=body, method="POST")
+        req.add_header("Content-Type", "application/x-www-form-urlencoded")
+        with urllib.request.urlopen(req, timeout=30) as r:
+            return json.loads(r.read())["access_token"]
+
+    def main():
+        t = token()
+
+        # A brand-new LLDAP user has no Keycloak row until something imports
+        # them, and no row means no id to email. The group mapper is LDAP_ONLY,
+        # so nothing imports them on its own.
+        try:
+            call("POST", f"/admin/realms/{REALM}/user-storage/{PROVIDER}/sync",
+                 raw_query="?action=triggerFullSync", token=t)
+            print("synced from lldap", flush=True)
+        except Exception as e:
+            print(f"sync failed, continuing: {e}", file=sys.stderr, flush=True)
+
+        users = call("GET", f"/admin/realms/{REALM}/users",
+                     raw_query="?max=1000&briefRepresentation=false", token=t) or []
+
+        sent = skipped = failed = 0
+        for u in users:
+            name = u.get("username", "")
+            attrs = u.get("attributes") or {}
+
+            if name in SKIP or name.startswith("service-account"):
+                skipped += 1; continue
+            if not u.get("email"):
+                # email is a required profile attribute, so this should not
+                # happen. If it does, emailing is impossible anyway.
+                print(f"skip {name}: no email", flush=True); skipped += 1; continue
+            if attrs.get("welcomeSent"):
+                skipped += 1; continue
+
+            if DRY:
+                print(f"DRY RUN would welcome {name} <{u['email']}>", flush=True)
+                sent += 1; continue
+
+            try:
+                q = "?" + urllib.parse.urlencode(
+                    {"client_id": CLIENT, "redirect_uri": REDIRECT})
+                call("PUT",
+                     f"/admin/realms/{REALM}/users/{u['id']}/execute-actions-email",
+                     body=["UPDATE_PASSWORD", "VERIFY_EMAIL"], token=t, raw_query=q)
+            except Exception as e:
+                print(f"FAILED to email {name}: {e}", file=sys.stderr, flush=True)
+                failed += 1
+                # Deliberately not marked, so the next run retries.
+                continue
+
+            # Mark only AFTER a successful send. Marking first would silently
+            # skip anyone whose email failed.
+            attrs["welcomeSent"] = [datetime.now(timezone.utc).isoformat()]
+            try:
+                call("PUT", f"/admin/realms/{REALM}/users/{u['id']}",
+                     body={"attributes": attrs}, token=t)
+            except Exception as e:
+                # Worse than failing to send: they get emailed again next run.
+                print(f"WARNING: emailed {name} but could not mark them: {e}",
+                      file=sys.stderr, flush=True)
+            print(f"welcomed {name} <{u['email']}>", flush=True)
+            sent += 1
+
+        print(f"done: {sent} welcomed, {skipped} skipped, {failed} failed", flush=True)
+        sys.exit(1 if failed else 0)
+
+    main()
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: keycloak-welcome
+  namespace: keycloak
+spec:
+  # Ten minutes is the longest someone waits between being created and being
+  # emailed. Cheap: most runs find nothing and exit in a second.
+  schedule: "*/10 * * * *"
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 1
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      backoffLimit: 1
+      template:
+        spec:
+          restartPolicy: Never
+          containers:
+            - name: welcome
+              image: python:3.12-alpine
+              command: ["python3", "/script/welcome.py"]
+              env:
+                - name: KC_URL
+                  value: http://keycloak:8080
+                - name: KC_REALM
+                  value: y4bo
+                # The LDAP user storage provider component. Fixed id, from
+                # `kcadm get components -r y4bo`.
+                - name: KC_LDAP_PROVIDER_ID
+                  value: plCGYYniSM6BmcLUwgSMyA
+                # Where the link drops them once the password is set.
+                - name: KC_REDIRECT_URI
+                  value: https://id.y4bo.com/realms/y4bo/account
+                - name: KC_ADMIN_USER
+                  valueFrom:
+                    secretKeyRef:
+                      name: keycloak-admin
+                      key: username
+                - name: KC_ADMIN_PASSWORD
+                  valueFrom:
+                    secretKeyRef:
+                      name: keycloak-admin
+                      key: password
+                # Flip to "true" to see who WOULD be emailed without sending.
+                - name: DRY_RUN
+                  value: "true"
+              resources:
+                requests:
+                  cpu: 10m
+                  memory: 32Mi
+                limits:
+                  memory: 128Mi
+              volumeMounts:
+                - name: script
+                  mountPath: /script
+                  readOnly: true
+          volumes:
+            - name: script
+              configMap:
+                name: keycloak-welcome-script

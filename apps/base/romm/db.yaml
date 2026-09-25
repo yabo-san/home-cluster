@@ -1,8 +1,6 @@
 # MariaDB for RomM only.
-#
 # Its own database rather than reusing Keycloak's Postgres: wrong engine, and an
 # identity provider's database should never be coupled to an application's.
-# Blast radius of one app.
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -48,8 +46,8 @@ spec:
           volumeMounts:
             - name: data
               mountPath: /var/lib/mysql
-          # Suspends liveness for 5min. Without it, liveness killed mariadb
-          # mid-init and left a half-migrated schema. INC in CHG0030426.
+          # Suspends liveness for 5min. Without it, liveness can kill mariadb
+          # mid-init and leave a half-migrated schema.
           startupProbe:
             exec:
               command: ["healthcheck.sh", "--connect", "--innodb_initialized"]

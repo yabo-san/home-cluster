@@ -1,12 +1,4 @@
-# Plain ClusterIP. No externalIPs.
-#
-# An earlier draft of CHG0030426 specified externalIPs: [100.99.35.21] for
-# tailnet-only access. That was never the owner's decision and it contradicted
-# what he actually asked for: ROM downloads available to the people he shares
-# with, which requires a public hostname.
-#
-# cloudflared runs in this namespace and reaches this Service by name over the
-# cluster network, so nothing here needs to bind a host address.
+# cloudflared runs in this namespace and reaches this Service by name.
 apiVersion: v1
 kind: Service
 metadata:
