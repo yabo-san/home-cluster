@@ -91,7 +91,7 @@ spec:
       # the ConfigMap into a writable emptyDir, then Homepage can add its own files.
       initContainers:
         - name: seed-config
-          image: busybox:1.36
+          image: busybox:1.38
           command: ["sh", "-c", "cp -L /src/* /app/config/ 2>/dev/null; true"]
           volumeMounts:
             - name: config-src
