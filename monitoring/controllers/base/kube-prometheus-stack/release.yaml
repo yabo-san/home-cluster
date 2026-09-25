@@ -263,12 +263,17 @@ spec:
               module: [http_up]
             static_configs:
               - targets:
+                  # gooselab, via his Caddy
                   - https://watch.gonse.org
                   - https://request.gonse.org
+                  - https://read.gonse.org
+                  - https://listen.gonse.org
+                  # this cluster, via Cloudflare tunnels
                   - https://monitoring.y4bo.com
                   - https://id.y4bo.com
                   - https://login.y4bo.com
-                  - https://audiobooks.y4bo.com
+                  - https://rom.y4bo.com
+                  - https://gaben.y4bo.com
             relabel_configs:
               - source_labels: [__address__]
                 target_label: __param_target
