@@ -46,6 +46,10 @@ spec:
         enabled: false
     singleBinary:
       replicas: 1
+      # On workernode, not thinkserver. Logs are disposable (168h retention) so
+      # this is the one stateful workload that can move without a migration.
+      nodeSelector:
+        kubernetes.io/hostname: workernode
       persistence:
         enabled: true
         storageClass: local-path
