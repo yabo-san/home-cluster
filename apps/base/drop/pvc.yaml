@@ -1,0 +1,26 @@
+# The game files stay on disk and are mounted read-only as a hostPath. These
+# claims hold Drop's object storage and its Postgres data.
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: drop-data
+  namespace: drop
+spec:
+  accessModes: [ReadWriteOnce]
+  storageClassName: local-path
+  resources:
+    requests:
+      storage: 20Gi
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: drop-db
+  namespace: drop
+spec:
+  accessModes: [ReadWriteOnce]
+  storageClassName: local-path
+  resources:
+    requests:
+      storage: 5Gi

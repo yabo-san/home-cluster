@@ -3,6 +3,7 @@ kind: Kustomization
 resources:
   # - linkding
   # - audiobookshelf   # decommissioned on the cluster — runs on nixland now
+  - drop
   - grafana-tunnel
   - lldap
   - paperless

@@ -1,0 +1,79 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: drop-db
+  namespace: drop
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: drop-db
+  template:
+    metadata:
+      labels:
+        app: drop-db
+    spec:
+      nodeSelector:
+        kubernetes.io/hostname: thinkserver
+      containers:
+        - name: postgres
+          image: postgres:14.24-alpine
+          env:
+            - name: POSTGRES_DB
+              value: drop
+            - name: POSTGRES_USER
+              value: drop
+            - name: PGDATA
+              # Subdirectory, because local-path gives us the volume root and
+              # postgres refuses to initialise into a non-empty directory.
+              value: /var/lib/postgresql/data/pgdata
+          envFrom:
+            - secretRef:
+                name: drop-secrets
+          ports:
+            - containerPort: 5432
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/postgresql/data
+          # Suspends liveness while the cluster initialises. Without this the
+          # liveness probe can kill postgres mid-init. See CHG0030426.
+          startupProbe:
+            exec:
+              command: ["pg_isready", "-U", "drop", "-d", "drop"]
+            failureThreshold: 30
+            periodSeconds: 10
+          readinessProbe:
+            exec:
+              command: ["pg_isready", "-U", "drop", "-d", "drop"]
+            periodSeconds: 10
+          livenessProbe:
+            exec:
+              command: ["pg_isready", "-U", "drop"]
+            periodSeconds: 30
+            failureThreshold: 5
+          resources:
+            requests:
+              cpu: 50m
+              memory: 256Mi
+            limits:
+              memory: 1Gi
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: drop-db
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: drop-db
+  namespace: drop
+spec:
+  type: ClusterIP
+  selector:
+    app: drop-db
+  ports:
+    - port: 5432
+      targetPort: 5432

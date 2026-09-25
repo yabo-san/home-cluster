@@ -1,0 +1,85 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: drop
+  namespace: drop
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: drop
+  template:
+    metadata:
+      labels:
+        app: drop
+    spec:
+      # The game library is a hostPath on this node.
+      nodeSelector:
+        kubernetes.io/hostname: thinkserver
+      # A Service named `drop` would inject DROP_PORT into the container.
+      enableServiceLinks: false
+      # Drop runs migrations at startup and exits if the database is unreachable.
+      initContainers:
+        - name: wait-for-db
+          image: busybox:1.37
+          command:
+            - sh
+            - -c
+            - until nc -z drop-db 5432; do echo waiting for drop-db; sleep 2; done
+      containers:
+        - name: drop
+          # Upstream has never shipped a stable release; rc-5 is the only
+          # pinnable tag that exists. CHG0030427.
+          image: ghcr.io/drop-oss/drop:0.4.0-rc-5
+          ports:
+            - containerPort: 3000
+          env:
+            - name: EXTERNAL_URL
+              value: https://gaben.y4bo.com
+            - name: OIDC_CLIENT_ID
+              value: drop
+            - name: OIDC_WELLKNOWN
+              value: https://id.y4bo.com/realms/y4bo/.well-known/openid-configuration
+            # Group-based admin, unlike RomM which can only do user/admin.
+            - name: OIDC_ADMIN_GROUP
+              value: platform-admin
+            - name: TZ
+              value: America/Los_Angeles
+          envFrom:
+            # DATABASE_URL (carries the password) and OIDC_CLIENT_SECRET.
+            - secretRef:
+                name: drop-secrets
+          volumeMounts:
+            - name: data
+              mountPath: /data
+            - name: library
+              mountPath: /library
+              # Read-only: importing indexes the files, it should not move them.
+              readOnly: true
+          startupProbe:
+            httpGet:
+              path: /
+              port: 3000
+            failureThreshold: 30
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 3000
+            periodSeconds: 15
+          resources:
+            requests:
+              cpu: 100m
+              memory: 512Mi
+            limits:
+              memory: 2Gi
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: drop-data
+        - name: library
+          hostPath:
+            path: /mnt/media/games/pc
+            type: Directory
