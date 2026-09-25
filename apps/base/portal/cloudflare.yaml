@@ -23,7 +23,9 @@ spec:
             httpGet:
               path: /ready
               port: 2000
-            failureThreshold: 1
+            # 3, not 1. A single missed probe was restarting the tunnel on
+            # any transient blip talking to Cloudflare's edge.
+            failureThreshold: 3
             initialDelaySeconds: 10
             periodSeconds: 10
           volumeMounts:
