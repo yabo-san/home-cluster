@@ -1,0 +1,57 @@
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: tempo
+  namespace: monitoring
+spec:
+  interval: 30m
+  chart:
+    spec:
+      chart: tempo
+      version: "1.24.4"
+      sourceRef:
+        kind: HelmRepository
+        name: grafana
+        namespace: monitoring
+      interval: 12h
+  install:
+    remediation:
+      retries: 3
+  upgrade:
+    remediation:
+      retries: 3
+  values:
+    # Single-binary Tempo. Traces land on a filesystem PVC, no object store and
+    # no database. Same shape as the Loki release next door.
+    #
+    # Pinned to WORKERNODE, not thinkserver: thinkserver was at 78% memory
+    # (5937Mi) when this was added and workernode at 33%. local-path is
+    # node-local so the PVC follows the pod.
+    tempo:
+      repository: grafana/tempo
+      tag: 2.9.0
+      retention: 168h
+      # OTLP receivers. gRPC 4317 is what Keycloak defaults to; http 4318 is
+      # what most SDKs use.
+      receivers:
+        otlp:
+          protocols:
+            grpc:
+              endpoint: 0.0.0.0:4317
+            http:
+              endpoint: 0.0.0.0:4318
+      resources:
+        requests:
+          cpu: 50m
+          memory: 256Mi
+        limits:
+          memory: 768Mi
+    nodeSelector:
+      kubernetes.io/hostname: workernode
+    persistence:
+      enabled: true
+      storageClassName: local-path
+      size: 10Gi
+    # Tempo exports its own metrics; scrape them with the rest.
+    serviceMonitor:
+      enabled: true
