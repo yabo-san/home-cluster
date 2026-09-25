@@ -157,9 +157,9 @@ spec:
                     secretKeyRef:
                       name: keycloak-admin
                       key: password
-                # Flip to "true" to see who WOULD be emailed without sending.
+                # "true" logs who would be emailed without sending.
                 - name: DRY_RUN
-                  value: "true"
+                  value: "false"
               resources:
                 requests:
                   cpu: 10m

@@ -45,9 +45,15 @@ spec:
             - name: OAUTH2_PROXY_HTTP_ADDRESS
               value: 0.0.0.0:4180
             - name: OAUTH2_PROXY_EMAIL_DOMAINS
-              value: "*"                       # accept any Keycloak user
+              value: "*"
             - name: OAUTH2_PROXY_SCOPE
-              value: openid email profile
+              value: openid email profile groups
+            # The portal lists every service URL, so a bare Keycloak account is
+            # not enough. Membership in at least one group is.
+            - name: OAUTH2_PROXY_OIDC_GROUPS_CLAIM
+              value: groups
+            - name: OAUTH2_PROXY_ALLOWED_GROUPS
+              value: platform-admin,media,reading,games
             - name: OAUTH2_PROXY_COOKIE_SECURE
               value: "true"
             - name: OAUTH2_PROXY_REVERSE_PROXY
