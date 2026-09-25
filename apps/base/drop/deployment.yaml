@@ -23,7 +23,7 @@ spec:
       # Drop runs migrations at startup and exits if the database is unreachable.
       initContainers:
         - name: wait-for-db
-          image: busybox:1.37
+          image: busybox:1.38
           command:
             - sh
             - -c
