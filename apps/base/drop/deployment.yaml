@@ -30,9 +30,15 @@ spec:
             - until nc -z drop-db 5432; do echo waiting for drop-db; sleep 2; done
       containers:
         - name: drop
-          # Upstream has never shipped a stable release; rc-5 is the only
-          # pinnable tag that exists. CHG0030427.
-          image: ghcr.io/drop-oss/drop:0.4.0-rc-5
+          # Pinned by DIGEST, not tag. Upstream has no stable release, and
+          # v0.4.0-rc-5 (tagged 2026-06-29) predates the fix for issue #481,
+          # which makes every Steam import fail when a game has no description
+          # (`Argument mDescription is missing`). Fixed 2026-08-30, so the only
+          # image with it is `latest`.
+          #
+          # A digest is reproducible where `latest` is not: this is exactly the
+          # bytes that were tested, and Renovate can still raise a PR for it.
+          image: ghcr.io/drop-oss/drop@sha256:2995f0b75ac3a6bc4d33b584f80882c3415f8bd9182c264378e3829b259b0bd4
           ports:
             - containerPort: 3000
           env:

@@ -33,6 +33,24 @@ spec:
               value: xforwarded
             - name: KC_HEALTH_ENABLED
               value: "true"
+
+            # OpenTelemetry tracing. Still a PREVIEW feature in 26.0, so it does
+            # nothing without KC_FEATURES=opentelemetry.
+            #
+            # tracing-jdbc-enabled defaults true, so a login produces spans for
+            # Keycloak AND its Postgres queries: one trace across two components.
+            - name: KC_FEATURES
+              value: opentelemetry
+            - name: KC_TRACING_ENABLED
+              value: "true"
+            - name: KC_TRACING_ENDPOINT
+              value: http://tempo.monitoring.svc.cluster.local:4317
+            - name: KC_TRACING_SERVICE_NAME
+              value: keycloak
+            # always_on because this cluster sees a handful of logins a day.
+            # Sampling exists for traffic volumes this does not have.
+            - name: KC_TRACING_SAMPLER_TYPE
+              value: always_on
             # --- Database ---
             - name: KC_DB
               value: postgres
