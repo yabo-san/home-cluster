@@ -43,6 +43,17 @@ data:
             href: https://id.y4bo.com/admin/y4bo/console
             description: Users & SSO
             icon: keycloak.png
+        # Where accounts are actually CREATED. Keycloak above shows users but the
+        # federation is read-only, so this is the only place a person is added or
+        # a password is reset.
+        #
+        # Tailnet address, so this link resolves for kevin and NOT for a viewer
+        # on the public portal. goose administers from the LAN instead:
+        # http://192.168.4.20:17170
+        - LLDAP:
+            href: http://100.99.35.21:17170
+            description: Create users & reset passwords
+            icon: ldap.png
 
   widgets.yaml: |
     - greeting:

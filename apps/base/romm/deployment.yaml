@@ -25,11 +25,13 @@ spec:
       # crash-loops until mariadb happens to win the race.
       initContainers:
         - name: wait-for-db
-          image: mariadb:11.4.13
+          # A TCP check, not `mariadb-admin ping`: ping authenticates, and with no
+          # credentials it fails forever even against a healthy server.
+          image: busybox:1.37
           command:
             - sh
             - -c
-            - until mariadb-admin ping -h romm-db --silent; do echo waiting for romm-db; sleep 3; done
+            - until nc -z romm-db 3306; do echo waiting for romm-db; sleep 2; done
       containers:
         - name: romm
           image: rommapp/romm:5.3.1
