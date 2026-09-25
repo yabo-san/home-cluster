@@ -30,11 +30,9 @@ spec:
         - name: mariadb
           image: mariadb:11.4.13
           args:
-            # CARRIED OVER FROM THE COMPOSE FILE, AND IT IS LOAD-BEARING.
-            # The original had MARIADB_EXTRA_FLAGS=--innodb-use-native-aio=0
-            # because the underlying volume does not support native async I/O.
-            # Drop it and mariadb fails to start with an InnoDB error that does
-            # not mention aio.
+            # LOAD-BEARING. The backing volume does not support native async
+            # I/O; without this mariadb fails to start with an InnoDB error that
+            # never mentions aio.
             - --innodb-use-native-aio=0
           env:
             - name: MARIADB_DATABASE
@@ -42,9 +40,7 @@ spec:
             - name: MARIADB_USER
               value: romm-user
           envFrom:
-            # MARIADB_ROOT_PASSWORD and MARIADB_PASSWORD. The compose file carried
-            # the documentation defaults (changeme_romm, changeme_romm_root)
-            # unchanged; both are regenerated here.
+            # MARIADB_ROOT_PASSWORD and MARIADB_PASSWORD.
             - secretRef:
                 name: romm-secrets
           ports:

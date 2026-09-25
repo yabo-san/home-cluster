@@ -20,6 +20,16 @@ spec:
         kubernetes.io/hostname: thinkserver
       # A Service named `romm` would inject ROMM_PORT and crash-loop the app.
       enableServiceLinks: false
+      # RomM runs schema migrations at startup and exits non-zero if the database
+      # is unreachable. Pods start in parallel, so without an ordering gate it
+      # crash-loops until mariadb happens to win the race.
+      initContainers:
+        - name: wait-for-db
+          image: mariadb:11.4.13
+          command:
+            - sh
+            - -c
+            - until mariadb-admin ping -h romm-db --silent; do echo waiting for romm-db; sleep 3; done
       containers:
         - name: romm
           image: rommapp/romm:5.3.1
