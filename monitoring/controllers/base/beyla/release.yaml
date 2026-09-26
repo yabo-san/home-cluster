@@ -43,6 +43,12 @@ spec:
         # Prometheus metrics would be a second copy.
         otel_traces_export:
           endpoint: http://tempo.monitoring.svc.cluster.local:4317
+          # 5% of traces, same as RomM's own SDK. Beyla at 100% traced a RomM
+          # library scan at about 20 spans/s and Tempo restarted mid-block,
+          # the same pattern as the earlier Tempo crash loop.
+          sampler:
+            name: parentbased_traceidratio
+            arg: "0.05"
         # null drops the chart's default Prometheus endpoint.
         prometheus_export: null
     resources:
