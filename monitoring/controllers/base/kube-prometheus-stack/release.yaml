@@ -246,6 +246,21 @@ spec:
       prometheusSpec:
         # Accept Tempo's metrics-generator writes (span metrics + service graph).
         enableRemoteWriteReceiver: true
+        # Persistent TSDB. Without this the data lived in an emptyDir and every
+        # pod recreation wiped all metrics and alert history, so the 10d
+        # retention was fiction. local-path is node-local: pin to thinkserver
+        # (workernode has the disk but not the memory). Size caps first.
+        storageSpec:
+          volumeClaimTemplate:
+            spec:
+              storageClassName: local-path
+              accessModes: [ReadWriteOnce]
+              resources:
+                requests:
+                  storage: 10Gi
+        retentionSize: 8GB
+        nodeSelector:
+          kubernetes.io/hostname: thinkserver
         # Select ALL PrometheusRules cluster-wide (Sloth-generated SLOs + our custom
         # rules), not just the chart's own release-labeled ones.
         ruleSelectorNilUsesHelmValues: false
