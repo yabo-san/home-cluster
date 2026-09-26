@@ -49,8 +49,23 @@ spec:
           sampler:
             name: parentbased_traceidratio
             arg: "0.05"
-        # null drops the chart's default Prometheus endpoint.
-        prometheus_export: null
+        # Unsampled RED metrics for dashboards and alerts. Traces are sampled
+        # at 5% (above), so rates derived from spans read about 1/20 of real
+        # traffic; these count every request.
+        prometheus_export:
+          port: 9090
+          path: /metrics
+        # Group URLs into routes (/api/roms/{id}) so the endpoint label stays
+        # low-cardinality when an app has no route information of its own.
+        routes:
+          unmatched: heuristic
+    service:
+      enabled: true
+    serviceMonitor:
+      enabled: true
+      # Prometheus only selects ServiceMonitors carrying this label.
+      additionalLabels:
+        release: kube-prometheus-stack
     resources:
       requests:
         cpu: 50m
