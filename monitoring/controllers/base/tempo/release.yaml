@@ -40,12 +40,15 @@ spec:
               endpoint: 0.0.0.0:4317
             http:
               endpoint: 0.0.0.0:4318
+      # 768Mi was not enough to complete a block a RomM library scan filled at
+      # 100% sampling: the GC thrashed at the ceiling, /ready timed out, and
+      # liveness killed it on the same block every start.
       resources:
         requests:
-          cpu: 50m
-          memory: 256Mi
+          cpu: 100m
+          memory: 512Mi
         limits:
-          memory: 768Mi
+          memory: 1536Mi
     nodeSelector:
       kubernetes.io/hostname: workernode
     persistence:
