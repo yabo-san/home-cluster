@@ -304,6 +304,8 @@ spec:
                   - https://request.gonse.org
                   - https://read.gonse.org
                   - https://listen.gonse.org
+                  # gooselab, LAN: Shelfmark (library.gonse.org is IP-gated)
+                  - http://192.168.4.66:8084
                   # this cluster, via Cloudflare tunnels
                   - https://monitoring.y4bo.com
                   - https://id.y4bo.com
