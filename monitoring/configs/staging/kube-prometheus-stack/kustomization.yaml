@@ -65,6 +65,12 @@ configMapGenerator:
     options:
       labels:
         grafana_dashboard: "1"
+  - name: grafana-dashboard-app-apm
+    files:
+      - dashboards/app-apm.json
+    options:
+      labels:
+        grafana_dashboard: "1"
   - name: grafana-dashboard-traces-apm
     files:
       - dashboards/traces-apm.json
