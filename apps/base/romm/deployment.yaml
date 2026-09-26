@@ -68,9 +68,11 @@ spec:
             - name: OIDC_ROLE_ADMIN
               value: platform-admin
 
-            # In-browser players. Global switches, not permissions
+            # In-browser players. Global switches, not permissions.
+            # EmulatorJS on (retro consoles in the browser; accounts are made by
+            # hand, so only invited users reach it). Flash and DOS players off.
             - name: DISABLE_EMULATOR_JS
-              value: "true"
+              value: "false"
             - name: DISABLE_RUFFLE_RS
               value: "true"
             - name: DISABLE_JSDOS
