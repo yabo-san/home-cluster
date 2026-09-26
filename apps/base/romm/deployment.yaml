@@ -46,6 +46,14 @@ spec:
               value: romm-user
             - name: HASHEOUS_API_ENABLED
               value: "true"
+            # No-account metadata sources. IGDB alone barely covers romhacks and
+            # translations; LaunchBox keeps an offline DB under /romm/launchbox.
+            - name: LAUNCHBOX_API_ENABLED
+              value: "true"
+            - name: PLAYMATCH_API_ENABLED
+              value: "true"
+            - name: TGDB_API_ENABLED
+              value: "true"
 
             - name: OIDC_ENABLED
               value: "true"
@@ -108,6 +116,9 @@ spec:
             - name: data
               mountPath: /romm/resources
               subPath: resources
+            - name: data
+              mountPath: /romm/launchbox
+              subPath: launchbox
             - name: data
               mountPath: /romm/assets
               subPath: assets
