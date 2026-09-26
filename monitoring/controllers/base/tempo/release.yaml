@@ -67,6 +67,9 @@ spec:
       enabled: true
       storageClassName: local-path
       size: 10Gi
-    # Tempo exports its own metrics; scrape them with the rest.
+    # Tempo exports its own metrics; scrape them with the rest. Without the
+    # release label Prometheus never selected this monitor: applied, not scraped.
     serviceMonitor:
       enabled: true
+      additionalLabels:
+        release: kube-prometheus-stack
