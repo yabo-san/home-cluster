@@ -59,6 +59,13 @@ spec:
         # low-cardinality when an app has no route information of its own.
         routes:
           unmatched: heuristic
+    # thinkserver only. Within minutes of Beyla starting on workernode (kernel
+    # 7.0, Ubuntu 26.04, 3.4Gi) that node stopped heartbeating and answered no
+    # ping on LAN or tailnet from 22:40 to 22:49 UTC on 2026-09-26, with no
+    # reboot and no OOM kill. Not proven to be Beyla, but not worth the risk to
+    # the node that runs Keycloak until it is understood.
+    nodeSelector:
+      kubernetes.io/hostname: thinkserver
     service:
       enabled: true
     serviceMonitor:
