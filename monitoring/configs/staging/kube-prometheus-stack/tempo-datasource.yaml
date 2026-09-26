@@ -28,3 +28,9 @@ data:
             filterByTraceID: true
           nodeGraph:
             enabled: true
+          # Service map and RED panels come from Tempo's metrics-generator,
+          # stored in Prometheus.
+          serviceMap:
+            datasourceUid: prometheus
+          tracesToMetrics:
+            datasourceUid: prometheus

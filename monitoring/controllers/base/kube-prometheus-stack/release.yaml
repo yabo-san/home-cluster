@@ -238,6 +238,8 @@ spec:
             equal: ["instance"]
     prometheus:
       prometheusSpec:
+        # Accept Tempo's metrics-generator writes (span metrics + service graph).
+        enableRemoteWriteReceiver: true
         # Select ALL PrometheusRules cluster-wide (Sloth-generated SLOs + our custom
         # rules), not just the chart's own release-labeled ones.
         ruleSelectorNilUsesHelmValues: false
