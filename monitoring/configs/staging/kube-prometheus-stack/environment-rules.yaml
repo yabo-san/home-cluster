@@ -1,0 +1,64 @@
+# Environment alerts: the gaps left by the built-in and synthetic rules.
+# Rule of thumb for this file: every alert is a symptom someone would notice or
+# the last warning before one, and every alert says what to do.
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: environment
+  namespace: monitoring
+  labels:
+    role: alert-rules
+spec:
+  groups:
+    - name: environment
+      rules:
+        - alert: RootDiskProjectedFull
+          # Linear fill over the last 6h projected 24h ahead. Every local-path
+          # volume (all databases, Prometheus) lives on a node root disk.
+          expr: |
+            predict_linear(node_filesystem_avail_bytes{mountpoint="/",fstype!="tmpfs"}[6h], 24 * 3600) < 0
+          for: 30m
+          labels:
+            severity: critical
+          annotations:
+            summary: "{{ $labels.instance }} root disk projected to fill within 24h"
+            runbook: "Find the writer: `du -xh / --max-depth=2 | sort -h | tail` on the node, then `kubectl get pvc -A`. Usual suspects: Prometheus/Loki/Tempo volumes, container images (`k3s crictl rmi --prune`)."
+
+        - alert: TLSCertExpiringCritical
+          expr: (probe_ssl_earliest_cert_expiry{job="blackbox-http"} - time()) / 86400 < 3
+          for: 30m
+          labels:
+            severity: critical
+          annotations:
+            summary: "{{ $labels.instance }} TLS certificate expires in under 3 days"
+            runbook: "The 14-day warning was missed. Edge certs are Cloudflare's: check the tunnel hostname and the zone's Edge Certificates page."
+
+        - alert: AppApdexLow
+          # Apdex with T = 0.512s (tolerating up to 2.048s), Tempo's bucket edges.
+          # Only when the service has traffic: sampled traces make idle periods noisy.
+          expr: |
+            (
+              (sum by (service) (rate(traces_spanmetrics_latency_bucket{span_kind="SPAN_KIND_SERVER",le="0.512"}[10m]))
+               + sum by (service) (rate(traces_spanmetrics_latency_bucket{span_kind="SPAN_KIND_SERVER",le="2.048"}[10m]))) / 2
+              / sum by (service) (rate(traces_spanmetrics_latency_bucket{span_kind="SPAN_KIND_SERVER",le="+Inf"}[10m]))
+            ) < 0.7
+            and sum by (service) (rate(traces_spanmetrics_calls_total{span_kind="SPAN_KIND_SERVER"}[10m])) > 0.01
+          for: 15m
+          labels:
+            severity: warning
+          annotations:
+            summary: "{{ $labels.service }} Apdex below 0.7 for 15m (users feel it)"
+            runbook: "Environment Health > Apps row for which endpoint; Traces APM > Slowest endpoints; open a slow trace in Tempo to see which span (DB query, outbound call) ate the time."
+
+        - alert: ContainerNearMemoryLimit
+          expr: |
+            max by (namespace, pod, container) (
+              container_memory_working_set_bytes{container!="",container!="POD"}
+              / on(namespace, pod, container) group_left kube_pod_container_resource_limits{resource="memory"}
+            ) > 0.9
+          for: 15m
+          labels:
+            severity: warning
+          annotations:
+            summary: "{{ $labels.namespace }}/{{ $labels.container }} above 90% of its memory limit for 15m"
+            runbook: "Near the limit Go/JVM apps thrash in GC before they are killed (Tempo 2026-09-26: liveness timeouts, not OOMKilled). Raise the limit in the app's release/manifest or cut the load (sampling, retention)."

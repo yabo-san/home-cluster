@@ -8,6 +8,7 @@ resources:
   - grafana-smtp-secret.yaml
   - homelab-storage-rules.yaml
   - synthetic-rules.yaml
+  - environment-rules.yaml
   - flux-rules.yaml
   - flux-podmonitor.yaml
   - jellyfin-rules.yaml
