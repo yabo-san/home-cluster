@@ -1,0 +1,53 @@
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: beyla
+  namespace: monitoring
+spec:
+  interval: 30m
+  chart:
+    spec:
+      chart: beyla
+      version: "1.16.11"
+      sourceRef:
+        kind: HelmRepository
+        name: grafana
+        namespace: monitoring
+      interval: 12h
+  install:
+    remediation:
+      retries: 3
+  upgrade:
+    remediation:
+      retries: 3
+  values:
+    # eBPF auto-instrumentation: one pod per node watches HTTP, gRPC and SQL
+    # calls from the kernel and sends spans to Tempo, so every app in the
+    # cluster lands on the Traces APM dashboard and service map with no image
+    # or code change. Same per-node pattern as node-exporter and promtail.
+    preset: application
+    config:
+      data:
+        attributes:
+          kubernetes:
+            enable: true
+        discovery:
+          instrument:
+            - k8s_namespace: "*"
+          # Not the platform itself. Instrumenting Tempo would trace Tempo
+          # receiving traces, a feedback loop.
+          exclude_instrument:
+            - k8s_namespace: "{kube-system,flux-system,monitoring}"
+        # Spans only. Tempo's metrics-generator already turns spans into the
+        # RED metrics and service graph the dashboards read, so Beyla's own
+        # Prometheus metrics would be a second copy.
+        otel_traces_export:
+          endpoint: http://tempo.monitoring.svc.cluster.local:4317
+        # null drops the chart's default Prometheus endpoint.
+        prometheus_export: null
+    resources:
+      requests:
+        cpu: 50m
+        memory: 128Mi
+      limits:
+        memory: 512Mi
