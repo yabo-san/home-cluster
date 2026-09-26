@@ -29,6 +29,12 @@ spec:
         target:
           kind: PrometheusRule
   values:
+    # Built-in rules that cannot mean anything on two unequal nodes: losing the
+    # control plane takes the cluster down regardless of spare capacity.
+    defaultRules:
+      disabled:
+        KubeMemoryOvercommit: true
+        KubeCPUOvercommit: true
     # added bc k3s sends junk
     kubeControllerManager:
       enabled: false
