@@ -118,6 +118,11 @@ spec:
             - name: library
               mountPath: /romm/library/roms
               readOnly: true
+            # RomM's default firmware layout is bios/{platform} beside roms/,
+            # so BIOS files show per platform in the UI and the web player.
+            - name: firmware
+              mountPath: /romm/library/bios
+              readOnly: true
           startupProbe:
             httpGet:
               path: /api/heartbeat
@@ -143,4 +148,8 @@ spec:
           hostPath:
             # Real path, not the /mnt/games symlink.
             path: /mnt/media/games/0 ROMS
+            type: Directory
+        - name: firmware
+          hostPath:
+            path: /mnt/media/games/bios
             type: Directory
