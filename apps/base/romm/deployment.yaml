@@ -90,6 +90,12 @@ spec:
               value: none
             - name: OTEL_LOGS_EXPORTER
               value: none
+            # 5% of traces. At the default 100%, a full library scan flooded
+            # Tempo with more spans than it could turn into a block.
+            - name: OTEL_TRACES_SAMPLER
+              value: parentbased_traceidratio
+            - name: OTEL_TRACES_SAMPLER_ARG
+              value: "0.05"
 
             - name: TZ
               value: America/Los_Angeles
