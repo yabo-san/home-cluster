@@ -327,13 +327,6 @@ spec:
                   - https://login.y4bo.com
                   - https://rom.y4bo.com
                   - https://gaben.y4bo.com
-              # gooselab, LAN: Shelfmark (library.gonse.org is IP-gated). Plain HTTP,
-              # so it uses the http_up_lan module; __param_module overrides the
-              # job-wide module for this target only.
-              - targets:
-                  - http://192.168.4.66:8084
-                labels:
-                  __param_module: http_up_lan
             relabel_configs:
               - source_labels: [__address__]
                 target_label: __param_target
@@ -341,3 +334,27 @@ spec:
                 target_label: instance
               - target_label: __address__
                 replacement: blackbox-exporter:9115
+          # gooselab, LAN: Shelfmark (library.gonse.org is IP-gated). Plain HTTP, so
+          # it needs the http_up_lan module (no fail_if_not_ssl). A per-target
+          # `__param_module` label does NOT work for this: the job-level `params`
+          # are applied after target labels and overwrote it, so the probe ran
+          # http_up, got a 200, and still reported probe_success 0 for two days
+          # (ServiceDown fired critical for a service that was up). Separate job,
+          # same relabels; the `job` label stays blackbox-http so the rules and
+          # dashboards that filter on it keep matching.
+          - job_name: blackbox-http-lan
+            metrics_path: /probe
+            params:
+              module: [http_up_lan]
+            static_configs:
+              - targets:
+                  - http://192.168.4.66:8084
+            relabel_configs:
+              - source_labels: [__address__]
+                target_label: __param_target
+              - source_labels: [__param_target]
+                target_label: instance
+              - target_label: __address__
+                replacement: blackbox-exporter:9115
+              - target_label: job
+                replacement: blackbox-http
