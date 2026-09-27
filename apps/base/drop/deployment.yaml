@@ -20,14 +20,8 @@ spec:
         kubernetes.io/hostname: thinkserver
       # A Service named `drop` would inject DROP_PORT into the container.
       enableServiceLinks: false
-      # Drop runs migrations at startup and exits if the database is unreachable.
-      initContainers:
-        - name: wait-for-db
-          image: busybox:1.37
-          command:
-            - sh
-            - -c
-            - until nc -z drop-db 5432; do echo waiting for drop-db; sleep 2; done
+      # Drop runs migrations at startup and exits if the database is unreachable;
+      # the kubelet's restart backoff covers a cold start (CHG0030479).
       containers:
         - name: drop
           # Pinned by DIGEST, not tag. Upstream has no stable release, and
