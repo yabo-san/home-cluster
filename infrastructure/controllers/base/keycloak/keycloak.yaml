@@ -99,6 +99,11 @@ spec:
             - name: realm-import
               mountPath: /opt/keycloak/data/import
               readOnly: true
+      # Next to its database (keycloak-postgres runs here) and off the control-plane
+      # node, which had 1.3 GB available against a 900Mi soft-eviction line
+      # (CHG0030470). Frees ~640Mi there for trace SDKs (CHG0030481).
+      nodeSelector:
+        kubernetes.io/hostname: workernode
       volumes:
         - name: realm-import
           secret:
