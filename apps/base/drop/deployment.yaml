@@ -14,6 +14,12 @@ spec:
     metadata:
       labels:
         app: drop
+      annotations:
+        # CHG0030481: the OpenTelemetry Operator injects the Node SDK at
+        # admission (init container + NODE_OPTIONS), 5% sampled, straight to
+        # Tempo. Drop is Node 24 / Nitro; http and pg are instrumented, which
+        # is the whole request path. Remove the annotation to back out.
+        instrumentation.opentelemetry.io/inject-nodejs: "monitoring/default"
     spec:
       # The game library is a hostPath on this node.
       nodeSelector:
