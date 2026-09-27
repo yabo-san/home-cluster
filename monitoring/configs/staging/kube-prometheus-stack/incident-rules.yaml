@@ -105,8 +105,12 @@ spec:
           # INC0044909: Tempo restarted 47 times overnight (liveness kills, exit
           # 137) and KubePodCrashLooping never fired: its rate threshold assumes
           # short backoffs. Count restarts instead.
+          # `and on (namespace, pod) kube_pod_info`: only pods that still exist.
+          # Without it the rule kept firing for 30 minutes after the crash-looping
+          # pod of INC0044916 was deleted, until its last samples left the window.
           expr: |
-            increase(kube_pod_container_status_restarts_total[30m]) > 3
+            (increase(kube_pod_container_status_restarts_total[30m]) > 3)
+            and on (namespace, pod) kube_pod_info
           for: 0m
           labels:
             severity: warning
@@ -119,6 +123,7 @@ spec:
             (sum by (namespace, pod, container) (increase(kube_pod_container_status_restarts_total[30m])) > 0)
             and on (namespace, pod, container)
             (kube_pod_container_status_last_terminated_reason{reason="OOMKilled"} == 1)
+            and on (namespace, pod) kube_pod_info
           for: 0m
           labels:
             severity: warning
