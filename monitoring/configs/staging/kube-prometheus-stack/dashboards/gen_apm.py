@@ -24,6 +24,8 @@ DS = {"type": "prometheus", "uid": "prometheus"}
 APPS = [
     {"slug": "romm", "title": "RomM", "service": "api", "namespace": "romm", "container": "romm", "source": "traces"},
     {"slug": "keycloak", "title": "Keycloak", "service": "keycloak", "namespace": "keycloak", "container": "keycloak", "source": "traces"},
+    # Injected by the OpenTelemetry Operator (CHG0030481); OTEL_SERVICE_NAME is the Deployment name.
+    {"slug": "drop", "title": "Drop", "service": "drop", "namespace": "drop", "container": "drop", "source": "traces"},
 ]
 
 # Apdex thresholds sit on real bucket edges of each source.

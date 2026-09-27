@@ -22,6 +22,10 @@
       "url": "/d/apm-keycloak?${__url_time_range}"
     },
     {
+      "title": "Drop APM",
+      "url": "/d/apm-drop?${__url_time_range}"
+    },
+    {
       "title": "Jellyfin APM",
       "url": "/d/jellyfin-apm?${__url_time_range}"
     },

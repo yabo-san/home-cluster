@@ -80,6 +80,12 @@ configMapGenerator:
     options:
       labels:
         grafana_dashboard: "1"
+  - name: grafana-dashboard-apm-drop
+    files:
+      - dashboards/apm-drop.json
+    options:
+      labels:
+        grafana_dashboard: "1"
   - name: grafana-dashboard-apm-keycloak
     files:
       - dashboards/apm-keycloak.json
