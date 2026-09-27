@@ -18,18 +18,6 @@
       "url": "/d/apm-romm?${__url_time_range}"
     },
     {
-      "title": "Paperless APM",
-      "url": "/d/apm-paperless?${__url_time_range}"
-    },
-    {
-      "title": "Drop APM",
-      "url": "/d/apm-drop?${__url_time_range}"
-    },
-    {
-      "title": "LLDAP APM",
-      "url": "/d/apm-lldap?${__url_time_range}"
-    },
-    {
       "title": "Keycloak APM",
       "url": "/d/apm-keycloak?${__url_time_range}"
     },
@@ -60,7 +48,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "sum(((((sum by (service_name) (rate(http_server_request_duration_seconds_bucket{service_name=~\".+\",le=\"0.25\"}[5m]))) + (sum by (service_name) (rate(http_server_request_duration_seconds_bucket{service_name=~\".+\",le=\"1.0\"}[5m])))) / 2) / sum by (service_name) (rate(http_server_request_duration_seconds_count{service_name=~\".+\"}[5m])) or label_replace((((sum (rate(traces_spanmetrics_latency_bucket{service=\"keycloak\",span_kind=\"SPAN_KIND_SERVER\",le=\"0.512\"}[5m]))) + (sum (rate(traces_spanmetrics_latency_bucket{service=\"keycloak\",span_kind=\"SPAN_KIND_SERVER\",le=\"2.048\"}[5m])))) / 2) / sum (rate(traces_spanmetrics_calls_total{service=\"keycloak\",span_kind=\"SPAN_KIND_SERVER\"}[5m])), \"service_name\", \"keycloak\", \"\", \"\") or label_replace(((sum(rate(http_request_duration_seconds_bucket{job=\"jellyfin\",le=\"0.256\"}[5m])) + sum(rate(http_request_duration_seconds_bucket{job=\"jellyfin\",le=\"1.024\"}[5m]))) / 2) / sum(rate(http_request_duration_seconds_count{job=\"jellyfin\"}[5m])), \"service_name\", \"jellyfin\", \"\", \"\")) * on (service_name) (sum by (service_name) (rate(http_server_request_duration_seconds_count{service_name=~\".+\"}[5m])) * 60 or label_replace(sum (rate(traces_spanmetrics_calls_total{service=\"keycloak\",span_kind=\"SPAN_KIND_SERVER\"}[5m])) * 60, \"service_name\", \"keycloak\", \"\", \"\") or label_replace(sum(rate(http_request_duration_seconds_count{job=\"jellyfin\"}[5m])) * 60, \"service_name\", \"jellyfin\", \"\", \"\"))) / sum(sum by (service_name) (rate(http_server_request_duration_seconds_count{service_name=~\".+\"}[5m])) * 60 or label_replace(sum (rate(traces_spanmetrics_calls_total{service=\"keycloak\",span_kind=\"SPAN_KIND_SERVER\"}[5m])) * 60, \"service_name\", \"keycloak\", \"\", \"\") or label_replace(sum(rate(http_request_duration_seconds_count{job=\"jellyfin\"}[5m])) * 60, \"service_name\", \"jellyfin\", \"\", \"\"))",
+          "expr": "sum((label_replace((((sum by (service) (rate(traces_spanmetrics_latency_bucket{service=~\".+\",span_kind=\"SPAN_KIND_SERVER\",le=\"0.512\"}[5m]))) + (sum by (service) (rate(traces_spanmetrics_latency_bucket{service=~\".+\",span_kind=\"SPAN_KIND_SERVER\",le=\"2.048\"}[5m])))) / 2) / sum by (service) (rate(traces_spanmetrics_calls_total{service=~\".+\",span_kind=\"SPAN_KIND_SERVER\"}[5m])), \"service_name\", \"$1\", \"service\", \"(.*)\") or label_replace(((sum(rate(http_request_duration_seconds_bucket{job=\"jellyfin\",le=\"0.256\"}[5m])) + sum(rate(http_request_duration_seconds_bucket{job=\"jellyfin\",le=\"1.024\"}[5m]))) / 2) / sum(rate(http_request_duration_seconds_count{job=\"jellyfin\"}[5m])), \"service_name\", \"jellyfin\", \"\", \"\")) * on (service_name) (label_replace(sum by (service) (rate(traces_spanmetrics_calls_total{service=~\".+\",span_kind=\"SPAN_KIND_SERVER\"}[5m])) * 60, \"service_name\", \"$1\", \"service\", \"(.*)\") or label_replace(sum(rate(http_request_duration_seconds_count{job=\"jellyfin\"}[5m])) * 60, \"service_name\", \"jellyfin\", \"\", \"\"))) / sum(label_replace(sum by (service) (rate(traces_spanmetrics_calls_total{service=~\".+\",span_kind=\"SPAN_KIND_SERVER\"}[5m])) * 60, \"service_name\", \"$1\", \"service\", \"(.*)\") or label_replace(sum(rate(http_request_duration_seconds_count{job=\"jellyfin\"}[5m])) * 60, \"service_name\", \"jellyfin\", \"\", \"\"))",
           "datasource": {
             "type": "prometheus",
             "uid": "prometheus"
@@ -101,7 +89,7 @@
         "colorMode": "value",
         "graphMode": "area"
       },
-      "description": "Each app's Apdex weighted by its traffic. Beyla apps T = 0.25s, Keycloak 0.512s, Jellyfin 0.256s."
+      "description": "Each app's Apdex weighted by its traffic. Traced apps T = 0.512s, Jellyfin 0.256s."
     },
     {
       "id": 2,
@@ -120,7 +108,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "sum(sum by (service_name) (rate(http_server_request_duration_seconds_count{service_name=~\".+\"}[5m])) * 60 or label_replace(sum (rate(traces_spanmetrics_calls_total{service=\"keycloak\",span_kind=\"SPAN_KIND_SERVER\"}[5m])) * 60, \"service_name\", \"keycloak\", \"\", \"\") or label_replace(sum(rate(http_request_duration_seconds_count{job=\"jellyfin\"}[5m])) * 60, \"service_name\", \"jellyfin\", \"\", \"\"))",
+          "expr": "sum(label_replace(sum by (service) (rate(traces_spanmetrics_calls_total{service=~\".+\",span_kind=\"SPAN_KIND_SERVER\"}[5m])) * 60, \"service_name\", \"$1\", \"service\", \"(.*)\") or label_replace(sum(rate(http_request_duration_seconds_count{job=\"jellyfin\"}[5m])) * 60, \"service_name\", \"jellyfin\", \"\", \"\"))",
           "datasource": {
             "type": "prometheus",
             "uid": "prometheus"
@@ -160,7 +148,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "sum((((sum by (service_name) (rate(http_server_request_duration_seconds_count{service_name=~\".+\",http_response_status_code=~\"5..\"}[5m]))) or (sum by (service_name) (rate(http_server_request_duration_seconds_count{service_name=~\".+\"}[5m])) * 0)) / sum by (service_name) (rate(http_server_request_duration_seconds_count{service_name=~\".+\"}[5m])) or label_replace(((sum (rate(traces_spanmetrics_calls_total{service=\"keycloak\",span_kind=\"SPAN_KIND_SERVER\",status_code=\"STATUS_CODE_ERROR\"}[5m]))) or (sum (rate(traces_spanmetrics_calls_total{service=\"keycloak\",span_kind=\"SPAN_KIND_SERVER\"}[5m])) * 0)) / sum (rate(traces_spanmetrics_calls_total{service=\"keycloak\",span_kind=\"SPAN_KIND_SERVER\"}[5m])), \"service_name\", \"keycloak\", \"\", \"\") or label_replace(((sum(rate(http_request_duration_seconds_count{job=\"jellyfin\",code=~\"5..\"}[5m]))) or (sum(rate(http_request_duration_seconds_count{job=\"jellyfin\"}[5m])) * 0)) / sum(rate(http_request_duration_seconds_count{job=\"jellyfin\"}[5m])), \"service_name\", \"jellyfin\", \"\", \"\")) * on (service_name) (sum by (service_name) (rate(http_server_request_duration_seconds_count{service_name=~\".+\"}[5m])) * 60 or label_replace(sum (rate(traces_spanmetrics_calls_total{service=\"keycloak\",span_kind=\"SPAN_KIND_SERVER\"}[5m])) * 60, \"service_name\", \"keycloak\", \"\", \"\") or label_replace(sum(rate(http_request_duration_seconds_count{job=\"jellyfin\"}[5m])) * 60, \"service_name\", \"jellyfin\", \"\", \"\"))) / sum(sum by (service_name) (rate(http_server_request_duration_seconds_count{service_name=~\".+\"}[5m])) * 60 or label_replace(sum (rate(traces_spanmetrics_calls_total{service=\"keycloak\",span_kind=\"SPAN_KIND_SERVER\"}[5m])) * 60, \"service_name\", \"keycloak\", \"\", \"\") or label_replace(sum(rate(http_request_duration_seconds_count{job=\"jellyfin\"}[5m])) * 60, \"service_name\", \"jellyfin\", \"\", \"\"))",
+          "expr": "sum((label_replace(((sum by (service) (rate(traces_spanmetrics_calls_total{service=~\".+\",span_kind=\"SPAN_KIND_SERVER\",status_code=\"STATUS_CODE_ERROR\"}[5m]))) or (sum by (service) (rate(traces_spanmetrics_calls_total{service=~\".+\",span_kind=\"SPAN_KIND_SERVER\"}[5m])) * 0)) / sum by (service) (rate(traces_spanmetrics_calls_total{service=~\".+\",span_kind=\"SPAN_KIND_SERVER\"}[5m])), \"service_name\", \"$1\", \"service\", \"(.*)\") or label_replace(((sum(rate(http_request_duration_seconds_count{job=\"jellyfin\",code=~\"5..\"}[5m]))) or (sum(rate(http_request_duration_seconds_count{job=\"jellyfin\"}[5m])) * 0)) / sum(rate(http_request_duration_seconds_count{job=\"jellyfin\"}[5m])), \"service_name\", \"jellyfin\", \"\", \"\")) * on (service_name) (label_replace(sum by (service) (rate(traces_spanmetrics_calls_total{service=~\".+\",span_kind=\"SPAN_KIND_SERVER\"}[5m])) * 60, \"service_name\", \"$1\", \"service\", \"(.*)\") or label_replace(sum(rate(http_request_duration_seconds_count{job=\"jellyfin\"}[5m])) * 60, \"service_name\", \"jellyfin\", \"\", \"\"))) / sum(label_replace(sum by (service) (rate(traces_spanmetrics_calls_total{service=~\".+\",span_kind=\"SPAN_KIND_SERVER\"}[5m])) * 60, \"service_name\", \"$1\", \"service\", \"(.*)\") or label_replace(sum(rate(http_request_duration_seconds_count{job=\"jellyfin\"}[5m])) * 60, \"service_name\", \"jellyfin\", \"\", \"\"))",
           "datasource": {
             "type": "prometheus",
             "uid": "prometheus"
@@ -217,7 +205,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "count(((((sum by (service_name) (rate(http_server_request_duration_seconds_bucket{service_name=~\".+\",le=\"0.25\"}[5m]))) + (sum by (service_name) (rate(http_server_request_duration_seconds_bucket{service_name=~\".+\",le=\"1.0\"}[5m])))) / 2) / sum by (service_name) (rate(http_server_request_duration_seconds_count{service_name=~\".+\"}[5m])) or label_replace((((sum (rate(traces_spanmetrics_latency_bucket{service=\"keycloak\",span_kind=\"SPAN_KIND_SERVER\",le=\"0.512\"}[5m]))) + (sum (rate(traces_spanmetrics_latency_bucket{service=\"keycloak\",span_kind=\"SPAN_KIND_SERVER\",le=\"2.048\"}[5m])))) / 2) / sum (rate(traces_spanmetrics_calls_total{service=\"keycloak\",span_kind=\"SPAN_KIND_SERVER\"}[5m])), \"service_name\", \"keycloak\", \"\", \"\") or label_replace(((sum(rate(http_request_duration_seconds_bucket{job=\"jellyfin\",le=\"0.256\"}[5m])) + sum(rate(http_request_duration_seconds_bucket{job=\"jellyfin\",le=\"1.024\"}[5m]))) / 2) / sum(rate(http_request_duration_seconds_count{job=\"jellyfin\"}[5m])), \"service_name\", \"jellyfin\", \"\", \"\")) < 0.85) or vector(0)",
+          "expr": "count((label_replace((((sum by (service) (rate(traces_spanmetrics_latency_bucket{service=~\".+\",span_kind=\"SPAN_KIND_SERVER\",le=\"0.512\"}[5m]))) + (sum by (service) (rate(traces_spanmetrics_latency_bucket{service=~\".+\",span_kind=\"SPAN_KIND_SERVER\",le=\"2.048\"}[5m])))) / 2) / sum by (service) (rate(traces_spanmetrics_calls_total{service=~\".+\",span_kind=\"SPAN_KIND_SERVER\"}[5m])), \"service_name\", \"$1\", \"service\", \"(.*)\") or label_replace(((sum(rate(http_request_duration_seconds_bucket{job=\"jellyfin\",le=\"0.256\"}[5m])) + sum(rate(http_request_duration_seconds_bucket{job=\"jellyfin\",le=\"1.024\"}[5m]))) / 2) / sum(rate(http_request_duration_seconds_count{job=\"jellyfin\"}[5m])), \"service_name\", \"jellyfin\", \"\", \"\")) < 0.85) or vector(0)",
           "datasource": {
             "type": "prometheus",
             "uid": "prometheus"
@@ -270,7 +258,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "(((sum by (service_name) (rate(http_server_request_duration_seconds_bucket{service_name=~\".+\",le=\"0.25\"}[5m]))) + (sum by (service_name) (rate(http_server_request_duration_seconds_bucket{service_name=~\".+\",le=\"1.0\"}[5m])))) / 2) / sum by (service_name) (rate(http_server_request_duration_seconds_count{service_name=~\".+\"}[5m])) or label_replace((((sum (rate(traces_spanmetrics_latency_bucket{service=\"keycloak\",span_kind=\"SPAN_KIND_SERVER\",le=\"0.512\"}[5m]))) + (sum (rate(traces_spanmetrics_latency_bucket{service=\"keycloak\",span_kind=\"SPAN_KIND_SERVER\",le=\"2.048\"}[5m])))) / 2) / sum (rate(traces_spanmetrics_calls_total{service=\"keycloak\",span_kind=\"SPAN_KIND_SERVER\"}[5m])), \"service_name\", \"keycloak\", \"\", \"\") or label_replace(((sum(rate(http_request_duration_seconds_bucket{job=\"jellyfin\",le=\"0.256\"}[5m])) + sum(rate(http_request_duration_seconds_bucket{job=\"jellyfin\",le=\"1.024\"}[5m]))) / 2) / sum(rate(http_request_duration_seconds_count{job=\"jellyfin\"}[5m])), \"service_name\", \"jellyfin\", \"\", \"\")",
+          "expr": "label_replace((((sum by (service) (rate(traces_spanmetrics_latency_bucket{service=~\".+\",span_kind=\"SPAN_KIND_SERVER\",le=\"0.512\"}[5m]))) + (sum by (service) (rate(traces_spanmetrics_latency_bucket{service=~\".+\",span_kind=\"SPAN_KIND_SERVER\",le=\"2.048\"}[5m])))) / 2) / sum by (service) (rate(traces_spanmetrics_calls_total{service=~\".+\",span_kind=\"SPAN_KIND_SERVER\"}[5m])), \"service_name\", \"$1\", \"service\", \"(.*)\") or label_replace(((sum(rate(http_request_duration_seconds_bucket{job=\"jellyfin\",le=\"0.256\"}[5m])) + sum(rate(http_request_duration_seconds_bucket{job=\"jellyfin\",le=\"1.024\"}[5m]))) / 2) / sum(rate(http_request_duration_seconds_count{job=\"jellyfin\"}[5m])), \"service_name\", \"jellyfin\", \"\", \"\")",
           "datasource": {
             "type": "prometheus",
             "uid": "prometheus"
@@ -280,7 +268,7 @@
         },
         {
           "refId": "B",
-          "expr": "sum by (service_name) (rate(http_server_request_duration_seconds_count{service_name=~\".+\"}[5m])) * 60 or label_replace(sum (rate(traces_spanmetrics_calls_total{service=\"keycloak\",span_kind=\"SPAN_KIND_SERVER\"}[5m])) * 60, \"service_name\", \"keycloak\", \"\", \"\") or label_replace(sum(rate(http_request_duration_seconds_count{job=\"jellyfin\"}[5m])) * 60, \"service_name\", \"jellyfin\", \"\", \"\")",
+          "expr": "label_replace(sum by (service) (rate(traces_spanmetrics_calls_total{service=~\".+\",span_kind=\"SPAN_KIND_SERVER\"}[5m])) * 60, \"service_name\", \"$1\", \"service\", \"(.*)\") or label_replace(sum(rate(http_request_duration_seconds_count{job=\"jellyfin\"}[5m])) * 60, \"service_name\", \"jellyfin\", \"\", \"\")",
           "datasource": {
             "type": "prometheus",
             "uid": "prometheus"
@@ -290,7 +278,7 @@
         },
         {
           "refId": "C",
-          "expr": "((sum by (service_name) (rate(http_server_request_duration_seconds_count{service_name=~\".+\",http_response_status_code=~\"5..\"}[5m]))) or (sum by (service_name) (rate(http_server_request_duration_seconds_count{service_name=~\".+\"}[5m])) * 0)) / sum by (service_name) (rate(http_server_request_duration_seconds_count{service_name=~\".+\"}[5m])) or label_replace(((sum (rate(traces_spanmetrics_calls_total{service=\"keycloak\",span_kind=\"SPAN_KIND_SERVER\",status_code=\"STATUS_CODE_ERROR\"}[5m]))) or (sum (rate(traces_spanmetrics_calls_total{service=\"keycloak\",span_kind=\"SPAN_KIND_SERVER\"}[5m])) * 0)) / sum (rate(traces_spanmetrics_calls_total{service=\"keycloak\",span_kind=\"SPAN_KIND_SERVER\"}[5m])), \"service_name\", \"keycloak\", \"\", \"\") or label_replace(((sum(rate(http_request_duration_seconds_count{job=\"jellyfin\",code=~\"5..\"}[5m]))) or (sum(rate(http_request_duration_seconds_count{job=\"jellyfin\"}[5m])) * 0)) / sum(rate(http_request_duration_seconds_count{job=\"jellyfin\"}[5m])), \"service_name\", \"jellyfin\", \"\", \"\")",
+          "expr": "label_replace(((sum by (service) (rate(traces_spanmetrics_calls_total{service=~\".+\",span_kind=\"SPAN_KIND_SERVER\",status_code=\"STATUS_CODE_ERROR\"}[5m]))) or (sum by (service) (rate(traces_spanmetrics_calls_total{service=~\".+\",span_kind=\"SPAN_KIND_SERVER\"}[5m])) * 0)) / sum by (service) (rate(traces_spanmetrics_calls_total{service=~\".+\",span_kind=\"SPAN_KIND_SERVER\"}[5m])), \"service_name\", \"$1\", \"service\", \"(.*)\") or label_replace(((sum(rate(http_request_duration_seconds_count{job=\"jellyfin\",code=~\"5..\"}[5m]))) or (sum(rate(http_request_duration_seconds_count{job=\"jellyfin\"}[5m])) * 0)) / sum(rate(http_request_duration_seconds_count{job=\"jellyfin\"}[5m])), \"service_name\", \"jellyfin\", \"\", \"\")",
           "datasource": {
             "type": "prometheus",
             "uid": "prometheus"
@@ -300,7 +288,7 @@
         },
         {
           "refId": "D",
-          "expr": "histogram_quantile(0.95, sum by (service_name, le) (rate(http_server_request_duration_seconds_bucket{service_name=~\".+\"}[5m]))) or label_replace(histogram_quantile(0.95, sum by (le) (rate(traces_spanmetrics_latency_bucket{service=\"keycloak\",span_kind=\"SPAN_KIND_SERVER\"}[5m]))), \"service_name\", \"keycloak\", \"\", \"\") or label_replace(histogram_quantile(0.95, sum by (le) (rate(http_request_duration_seconds_bucket{job=\"jellyfin\"}[5m]))), \"service_name\", \"jellyfin\", \"\", \"\")",
+          "expr": "label_replace(histogram_quantile(0.95, sum by (service, le) (rate(traces_spanmetrics_latency_bucket{service=~\".+\",span_kind=\"SPAN_KIND_SERVER\"}[5m]))), \"service_name\", \"$1\", \"service\", \"(.*)\") or label_replace(histogram_quantile(0.95, sum by (le) (rate(http_request_duration_seconds_bucket{job=\"jellyfin\"}[5m]))), \"service_name\", \"jellyfin\", \"\", \"\")",
           "datasource": {
             "type": "prometheus",
             "uid": "prometheus"
@@ -452,7 +440,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "(((sum by (service_name) (rate(http_server_request_duration_seconds_bucket{service_name=~\".+\",le=\"0.25\"}[5m]))) + (sum by (service_name) (rate(http_server_request_duration_seconds_bucket{service_name=~\".+\",le=\"1.0\"}[5m])))) / 2) / sum by (service_name) (rate(http_server_request_duration_seconds_count{service_name=~\".+\"}[5m])) or label_replace((((sum (rate(traces_spanmetrics_latency_bucket{service=\"keycloak\",span_kind=\"SPAN_KIND_SERVER\",le=\"0.512\"}[5m]))) + (sum (rate(traces_spanmetrics_latency_bucket{service=\"keycloak\",span_kind=\"SPAN_KIND_SERVER\",le=\"2.048\"}[5m])))) / 2) / sum (rate(traces_spanmetrics_calls_total{service=\"keycloak\",span_kind=\"SPAN_KIND_SERVER\"}[5m])), \"service_name\", \"keycloak\", \"\", \"\") or label_replace(((sum(rate(http_request_duration_seconds_bucket{job=\"jellyfin\",le=\"0.256\"}[5m])) + sum(rate(http_request_duration_seconds_bucket{job=\"jellyfin\",le=\"1.024\"}[5m]))) / 2) / sum(rate(http_request_duration_seconds_count{job=\"jellyfin\"}[5m])), \"service_name\", \"jellyfin\", \"\", \"\")",
+          "expr": "label_replace((((sum by (service) (rate(traces_spanmetrics_latency_bucket{service=~\".+\",span_kind=\"SPAN_KIND_SERVER\",le=\"0.512\"}[5m]))) + (sum by (service) (rate(traces_spanmetrics_latency_bucket{service=~\".+\",span_kind=\"SPAN_KIND_SERVER\",le=\"2.048\"}[5m])))) / 2) / sum by (service) (rate(traces_spanmetrics_calls_total{service=~\".+\",span_kind=\"SPAN_KIND_SERVER\"}[5m])), \"service_name\", \"$1\", \"service\", \"(.*)\") or label_replace(((sum(rate(http_request_duration_seconds_bucket{job=\"jellyfin\",le=\"0.256\"}[5m])) + sum(rate(http_request_duration_seconds_bucket{job=\"jellyfin\",le=\"1.024\"}[5m]))) / 2) / sum(rate(http_request_duration_seconds_count{job=\"jellyfin\"}[5m])), \"service_name\", \"jellyfin\", \"\", \"\")",
           "datasource": {
             "type": "prometheus",
             "uid": "prometheus"
@@ -486,7 +474,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "sum by (service_name) (rate(http_server_request_duration_seconds_count{service_name=~\".+\"}[5m])) * 60 or label_replace(sum (rate(traces_spanmetrics_calls_total{service=\"keycloak\",span_kind=\"SPAN_KIND_SERVER\"}[5m])) * 60, \"service_name\", \"keycloak\", \"\", \"\") or label_replace(sum(rate(http_request_duration_seconds_count{job=\"jellyfin\"}[5m])) * 60, \"service_name\", \"jellyfin\", \"\", \"\")",
+          "expr": "label_replace(sum by (service) (rate(traces_spanmetrics_calls_total{service=~\".+\",span_kind=\"SPAN_KIND_SERVER\"}[5m])) * 60, \"service_name\", \"$1\", \"service\", \"(.*)\") or label_replace(sum(rate(http_request_duration_seconds_count{job=\"jellyfin\"}[5m])) * 60, \"service_name\", \"jellyfin\", \"\", \"\")",
           "datasource": {
             "type": "prometheus",
             "uid": "prometheus"
@@ -518,7 +506,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "histogram_quantile(0.95, sum by (service_name, le) (rate(http_server_request_duration_seconds_bucket{service_name=~\".+\"}[5m]))) or label_replace(histogram_quantile(0.95, sum by (le) (rate(traces_spanmetrics_latency_bucket{service=\"keycloak\",span_kind=\"SPAN_KIND_SERVER\"}[5m]))), \"service_name\", \"keycloak\", \"\", \"\") or label_replace(histogram_quantile(0.95, sum by (le) (rate(http_request_duration_seconds_bucket{job=\"jellyfin\"}[5m]))), \"service_name\", \"jellyfin\", \"\", \"\")",
+          "expr": "label_replace(histogram_quantile(0.95, sum by (service, le) (rate(traces_spanmetrics_latency_bucket{service=~\".+\",span_kind=\"SPAN_KIND_SERVER\"}[5m]))), \"service_name\", \"$1\", \"service\", \"(.*)\") or label_replace(histogram_quantile(0.95, sum by (le) (rate(http_request_duration_seconds_bucket{job=\"jellyfin\"}[5m]))), \"service_name\", \"jellyfin\", \"\", \"\")",
           "datasource": {
             "type": "prometheus",
             "uid": "prometheus"
@@ -550,7 +538,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "((sum by (service_name) (rate(http_server_request_duration_seconds_count{service_name=~\".+\",http_response_status_code=~\"5..\"}[5m]))) or (sum by (service_name) (rate(http_server_request_duration_seconds_count{service_name=~\".+\"}[5m])) * 0)) / sum by (service_name) (rate(http_server_request_duration_seconds_count{service_name=~\".+\"}[5m])) or label_replace(((sum (rate(traces_spanmetrics_calls_total{service=\"keycloak\",span_kind=\"SPAN_KIND_SERVER\",status_code=\"STATUS_CODE_ERROR\"}[5m]))) or (sum (rate(traces_spanmetrics_calls_total{service=\"keycloak\",span_kind=\"SPAN_KIND_SERVER\"}[5m])) * 0)) / sum (rate(traces_spanmetrics_calls_total{service=\"keycloak\",span_kind=\"SPAN_KIND_SERVER\"}[5m])), \"service_name\", \"keycloak\", \"\", \"\") or label_replace(((sum(rate(http_request_duration_seconds_count{job=\"jellyfin\",code=~\"5..\"}[5m]))) or (sum(rate(http_request_duration_seconds_count{job=\"jellyfin\"}[5m])) * 0)) / sum(rate(http_request_duration_seconds_count{job=\"jellyfin\"}[5m])), \"service_name\", \"jellyfin\", \"\", \"\")",
+          "expr": "label_replace(((sum by (service) (rate(traces_spanmetrics_calls_total{service=~\".+\",span_kind=\"SPAN_KIND_SERVER\",status_code=\"STATUS_CODE_ERROR\"}[5m]))) or (sum by (service) (rate(traces_spanmetrics_calls_total{service=~\".+\",span_kind=\"SPAN_KIND_SERVER\"}[5m])) * 0)) / sum by (service) (rate(traces_spanmetrics_calls_total{service=~\".+\",span_kind=\"SPAN_KIND_SERVER\"}[5m])), \"service_name\", \"$1\", \"service\", \"(.*)\") or label_replace(((sum(rate(http_request_duration_seconds_count{job=\"jellyfin\",code=~\"5..\"}[5m]))) or (sum(rate(http_request_duration_seconds_count{job=\"jellyfin\"}[5m])) * 0)) / sum(rate(http_request_duration_seconds_count{job=\"jellyfin\"}[5m])), \"service_name\", \"jellyfin\", \"\", \"\")",
           "datasource": {
             "type": "prometheus",
             "uid": "prometheus"

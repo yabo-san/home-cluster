@@ -16,11 +16,13 @@ import json
 DS = {"type": "prometheus", "uid": "prometheus"}
 
 # service = the service_name (beyla) or service (traces) label value.
+# Only apps that actually emit spans get a dashboard. Beyla (the eBPF source) was
+# rolled back after INC0044913, so "beyla" entries produced empty boards; they were
+# removed 2026-09-27 and come back per app under CHG0030481 (OpenTelemetry Operator
+# auto-instrumentation, opt-in per pod). RomM exports OTLP natively and names
+# itself "api" in its spans.
 APPS = [
-    {"slug": "romm", "title": "RomM", "service": "romm", "namespace": "romm", "container": "romm", "source": "beyla"},
-    {"slug": "paperless", "title": "Paperless", "service": "paperless", "namespace": "paperless", "container": "paperless", "source": "beyla"},
-    {"slug": "drop", "title": "Drop", "service": "drop", "namespace": "drop", "container": "drop", "source": "beyla"},
-    {"slug": "lldap", "title": "LLDAP", "service": "lldap", "namespace": "lldap", "container": "lldap", "source": "beyla"},
+    {"slug": "romm", "title": "RomM", "service": "api", "namespace": "romm", "container": "romm", "source": "traces"},
     {"slug": "keycloak", "title": "Keycloak", "service": "keycloak", "namespace": "keycloak", "container": "keycloak", "source": "traces"},
 ]
 
@@ -192,8 +194,10 @@ def app_board(app):
 
 def env_board():
     """Consolidated view: every app on one page, Jellyfin and Keycloak included."""
-    bey = Q("beyla", 'service_name=~".+"')
-    kc = Q("traces", 'service="keycloak"')
+    # Every traced service at once (RomM as "api", Keycloak, and whatever CHG0030481
+    # adds), grouped by the span-metrics "service" label and renamed to service_name
+    # so it joins the Jellyfin rows below. The Beyla union was removed with Beyla.
+    tr = Q("traces", 'service=~".+"')
     jf_sel = 'job="jellyfin"'
     jf_count = f"http_request_duration_seconds_count{{{jf_sel}}}"
     jf_bucket = "http_request_duration_seconds_bucket{%s}" % jf_sel
@@ -211,18 +215,21 @@ def env_board():
               f" / {jf_rate(jf_count)}")
     jf_p95 = f"histogram_quantile(0.95, sum by (le) (rate({jf_bucket}[5m])))"
 
-    def union(beyla_expr, kc_expr, jf_expr):
-        return f"{beyla_expr} or {lr(kc_expr, 'keycloak')} or {lr(jf_expr, 'jellyfin')}"
+    def by_service(expr):
+        return f'label_replace({expr}, "service_name", "$1", "service", "(.*)")'
 
-    apdex_by = union(bey.apdex("service_name"), kc.apdex(), jf_apdex)
-    rpm_by = union(f"{bey.rate(bey.count, 'service_name')} * 60", f"{kc.rate(kc.count)} * 60", f"{jf_rate(jf_count)} * 60")
-    err_by = union(bey.err_ratio("service_name"), kc.err_ratio(), jf_err)
-    p95_by = union(bey.quantile(0.95, "service_name"), kc.quantile(0.95), jf_p95)
+    def union(tr_expr, jf_expr):
+        return f"{by_service(tr_expr)} or {lr(jf_expr, 'jellyfin')}"
+
+    apdex_by = union(tr.apdex("service"), jf_apdex)
+    rpm_by = union(f"{tr.rate(tr.count, 'service')} * 60", f"{jf_rate(jf_count)} * 60")
+    err_by = union(tr.err_ratio("service"), jf_err)
+    p95_by = union(tr.quantile(0.95, "service"), jf_p95)
 
     bd = Board()
     p = bd.add("stat", "Environment Apdex (request-weighted)", (0, 0, 6, 5),
                [target(f"sum(({apdex_by}) * on (service_name) ({rpm_by})) / sum({rpm_by})")],
-               "percentunit", "Each app's Apdex weighted by its traffic. Beyla apps T = 0.25s, Keycloak 0.512s, Jellyfin 0.256s.")
+               "percentunit", "Each app's Apdex weighted by its traffic. Traced apps T = 0.512s, Jellyfin 0.256s.")
     p["fieldConfig"]["defaults"].update({"thresholds": APDEX_THRESHOLDS, "min": 0, "max": 1})
     bd.add("stat", "Total throughput (rpm)", (6, 0, 6, 5), [target(f"sum({rpm_by})")], "short")
     p = bd.add("stat", "Environment error rate", (12, 0, 6, 5),
