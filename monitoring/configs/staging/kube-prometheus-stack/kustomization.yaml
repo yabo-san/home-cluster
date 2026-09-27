@@ -14,6 +14,7 @@ resources:
   - incident-rules.yaml
   - tunnel-rules.yaml
   - database-rules.yaml
+  - loki-rules.yaml
   - db-exporters-podmonitor.yaml
   - cloudflared-podmonitor.yaml
   - flux-podmonitor.yaml

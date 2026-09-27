@@ -44,6 +44,22 @@ spec:
         retention_period: 168h
       pattern_ingester:
         enabled: false
+      # Log-based alerts (CHG0030485). The ruler was running with local storage
+      # but no rule directory and no Alertmanager, so it could never fire.
+      # Rules arrive as ConfigMaps labelled `loki_rule` in `monitoring`; the
+      # rules sidecar writes them to /rules/fake (auth is off, so the tenant is
+      # "fake", and local rule storage reads /rules/<tenant>/).
+      rulerConfig:
+        wal:
+          dir: /var/loki/ruler-wal
+        storage:
+          type: local
+          local:
+            directory: /rules
+        rule_path: /var/loki/rules-temp
+        alertmanager_url: http://kube-prometheus-stack-alertmanager.monitoring:9093
+        enable_api: true
+        enable_alertmanager_v2: true
     singleBinary:
       replicas: 1
       # On workernode, not thinkserver. Logs are disposable (168h retention) so
@@ -80,3 +96,6 @@ spec:
       enabled: false
     minio:
       enabled: false
+    sidecar:
+      rules:
+        folder: /rules/fake

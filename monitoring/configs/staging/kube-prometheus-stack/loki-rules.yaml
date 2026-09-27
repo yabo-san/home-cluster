@@ -1,0 +1,118 @@
+# Log-based alerts, evaluated by Loki's ruler and sent to the same
+# Alertmanager as the metric alerts (CHG0030485). Each rule names the incident
+# whose evidence was only in the logs.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: loki-alert-rules
+  namespace: monitoring
+  labels:
+    loki_rule: ""
+data:
+  log-alerts.yaml: |
+    groups:
+      - name: host-journal
+        rules:
+          - alert: KernelTrouble
+            # INC0044913, INC0044912, the 09-12 mount fault: all visible in the
+            # kernel log before anything else noticed.
+            expr: |
+              sum by (node) (count_over_time({job="node-journal", transport="kernel"}
+                |~ "(?i)soft lockup|hung_task|blocked for more than|out of memory|oom-kill|killed process|i/o error|ext4-fs error|remounting filesystem read-only" [10m])) > 0
+            for: 0m
+            labels:
+              severity: warning
+            annotations:
+              summary: "Kernel trouble on {{ $labels.node }}: {{ $value }} matching line(s) in 10m"
+              runbook: "Grafana Explore, Loki: {job=\"node-journal\", transport=\"kernel\", node=\"{{ $labels.node }}\"}. OOM lines name the victim; lockup and hung_task lines precede a stall (CHG0030469 panics on them); I/O errors mean the disk. Records: INC0044913, INC0044912."
+
+          - alert: JournaldUnderPressure
+            # INC0044913: this line repeated for hours before the power button.
+            expr: |
+              sum by (node) (count_over_time({job="node-journal"} |= "Under memory pressure, flushing caches" [10m])) > 0
+            for: 0m
+            labels:
+              severity: critical
+            annotations:
+              summary: "{{ $labels.node }} is under host memory pressure (journald flushing caches)"
+              runbook: "This is the INC0044913 shape hours before the stall. kubectl top pods -A --sort-by=memory; remove the growing workload now."
+
+          - alert: BPFWarning
+            # CHG0030464 / INC0044913: the kernel warned at the first Beyla start.
+            expr: |
+              sum by (node) (count_over_time({job="node-journal", transport="kernel"} |= "bpf_probe_write_user" [15m])) > 0
+            for: 0m
+            labels:
+              severity: warning
+            annotations:
+              summary: "A program on {{ $labels.node }} installed a BPF probe that can write user memory"
+              runbook: "Something privileged is running eBPF. kubectl get ds -A and look for new agents. Record: CHG0030464."
+
+          - alert: HostCronJobOutputDiscarded
+            # INC0044907: a host cron job failed 392 nights. Cron only logs a job's
+            # output when it tries to mail it; with no mail agent it logs this
+            # line and throws the output away. A job that prints is a job that is
+            # complaining.
+            expr: |
+              sum by (node) (count_over_time({job="node-journal", unit="cron.service"} |~ "(?i)No MTA installed|error|failed" [24h])) > 0
+            for: 0m
+            labels:
+              severity: warning
+            annotations:
+              summary: "A host cron job on {{ $labels.node }} produced output or errors in the last 24h"
+              runbook: "{job=\"node-journal\", unit=\"cron.service\", node=\"{{ $labels.node }}\"} for the job, then run it by hand. Record: INC0044907."
+
+      - name: app-logs
+        rules:
+          - alert: AppErrorBurst
+            # The backend version of "this app is firing X errors". Five times its
+            # own previous hour, and at least 20 lines, so a quiet app with one
+            # error does not page.
+            expr: |
+              (
+                sum by (namespace) (count_over_time({namespace=~".+", namespace!="monitoring"} |~ "(?i)\b(error|exception|traceback)\b" [5m]))
+                > 5 * (sum by (namespace) (count_over_time({namespace=~".+", namespace!="monitoring"} |~ "(?i)\b(error|exception|traceback)\b" [1h] offset 1h)) / 12)
+              )
+              and sum by (namespace) (count_over_time({namespace=~".+", namespace!="monitoring"} |~ "(?i)\b(error|exception|traceback)\b" [5m])) > 20
+            for: 5m
+            labels:
+              severity: warning
+            annotations:
+              summary: "{{ $labels.namespace }}: error lines at {{ $value }} in 5m, over 5x its previous hour"
+              runbook: "Grafana Explore, Loki: {namespace=\"{{ $labels.namespace }}\"} |~ \"(?i)error|exception|traceback\". INC0044916 is what this looks like during a bad rollout."
+
+          - alert: LoginFailureBurst
+            # The group-gate lockout (reverted 7eba2f9), invalid_scope on every
+            # client, or someone guessing passwords.
+            expr: |
+              sum(count_over_time({namespace="keycloak", container="keycloak"} |= "type=\"LOGIN_ERROR\"" [5m])) > 10
+            for: 0m
+            labels:
+              severity: warning
+            annotations:
+              summary: "{{ $value }} failed Keycloak logins in 5m"
+              runbook: "The log lines carry clientId, userId and error. One client failing for everyone = a config break (scopes, mappers). Many users on one client from one IP = guessing."
+
+          - alert: WelcomeJobDNSFailure
+            # CHG0030482: the welcome CronJob failed on DNS during node restarts;
+            # this fires on the first failure, not 6 hours later.
+            expr: |
+              sum(count_over_time({namespace="keycloak", container="welcome"} |~ "Errno -3|Temporary failure in name resolution" [30m])) > 0
+            for: 0m
+            labels:
+              severity: warning
+            annotations:
+              summary: "The Keycloak welcome job cannot resolve DNS"
+              runbook: "kubectl -n kube-system get pods -l k8s-app=kube-dns -o wide. One CoreDNS replica on thinkserver is the known cause (CHG0030482)."
+
+          - alert: ImportFailed
+            # Drop's metadata-import bug (the reason its image is pinned by digest)
+            # and a Paperless document that fails to consume.
+            expr: |
+              sum by (namespace) (count_over_time({namespace=~"drop|paperless"} |~ "Argument mDescription is missing|(?i)consum\w* .*(error|failed)" [30m])) > 0
+            for: 0m
+            labels:
+              severity: warning
+            annotations:
+              summary: "{{ $labels.namespace }}: an import or document consume failed"
+              runbook: "Drop: check the image digest still includes the #481 fix. Paperless: the document list shows the failed file and the reason."
