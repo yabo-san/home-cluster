@@ -27,7 +27,7 @@ spec:
         - name: wait-for-db
           # A TCP check, not `mariadb-admin ping`: ping authenticates, and with no
           # credentials it fails forever even against a healthy server.
-          image: busybox:1.37
+          image: busybox:1.38
           command:
             - sh
             - -c
