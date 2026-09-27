@@ -4,7 +4,7 @@
 # windows, percentage thresholds that a 7.7 GB node never reaches before it is
 # unusable). These are sized for two nodes and one operator.
 #
-# Each annotation names the record the rule comes from (grifting/tickets), so the
+# Each annotation names the change or incident record the rule comes from, so the
 # alert email says which past incident it is the early warning for.
 apiVersion: monitoring.coreos.com/v1
 kind: PrometheusRule
