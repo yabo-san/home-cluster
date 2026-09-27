@@ -34,3 +34,39 @@ spec:
     env:
       - name: OTEL_EXPORTER_OTLP_PROTOCOL
         value: http/protobuf
+
+---
+# Same as default, 100% sampled. For apps with a few requests a minute (Drop):
+# at 5% their APM boards stay empty for hours. Setting OTEL_TRACES_SAMPLER_ARG
+# on the container does not work; the injector writes its own value over it.
+apiVersion: opentelemetry.io/v1alpha1
+kind: Instrumentation
+metadata:
+  name: low-traffic
+  namespace: monitoring
+spec:
+  exporter:
+    # OTLP over HTTP; Tempo listens on 4318 (monitoring/controllers/base/tempo).
+    endpoint: http://tempo.monitoring:4318
+  propagators:
+    - tracecontext
+    - baggage
+  sampler:
+    # 5%, the same ratio RomM uses natively and the ratio the Beyla fix settled
+    # on after a 100%-sampled library scan filled a Tempo block (INC0044909).
+    type: parentbased_traceidratio
+    argument: "1.0"
+  resource:
+    addK8sUIDAttributes: false
+  nodejs:
+    env:
+      - name: OTEL_EXPORTER_OTLP_PROTOCOL
+        value: http/protobuf
+  python:
+    env:
+      - name: OTEL_EXPORTER_OTLP_PROTOCOL
+        value: http/protobuf
+  java:
+    env:
+      - name: OTEL_EXPORTER_OTLP_PROTOCOL
+        value: http/protobuf

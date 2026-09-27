@@ -16,10 +16,10 @@ spec:
         app: drop
       annotations:
         # CHG0030481: the OpenTelemetry Operator injects the Node SDK at
-        # admission (init container + NODE_OPTIONS), 5% sampled, straight to
+        # admission (init container + NODE_OPTIONS), every trace kept (low-traffic), straight to
         # Tempo. Drop is Node 24 / Nitro; http and pg are instrumented, which
         # is the whole request path. Remove the annotation to back out.
-        instrumentation.opentelemetry.io/inject-nodejs: "monitoring/default"
+        instrumentation.opentelemetry.io/inject-nodejs: "monitoring/low-traffic"
     spec:
       # The game library is a hostPath on this node.
       nodeSelector:
@@ -58,16 +58,6 @@ spec:
               value: games
             - name: TZ
               value: America/Los_Angeles
-          env:
-            # Drop sees a few requests a minute; at the shared 5% sample rate its
-            # APM board stays empty for hours. Full sampling here costs Tempo
-            # nothing at this traffic. The injector leaves an env var alone when
-            # the container already defines it, so this overrides the
-            # Instrumentation's ratio for Drop only.
-            - name: OTEL_TRACES_SAMPLER
-              value: parentbased_traceidratio
-            - name: OTEL_TRACES_SAMPLER_ARG
-              value: "1.0"
           envFrom:
             # DATABASE_URL (carries the password) and OIDC_CLIENT_SECRET.
             - secretRef:
