@@ -4,6 +4,8 @@ resources:
   - namespace.yaml
   - secrets.yaml
   - realm-secret.yaml
+  # CHG0030486: add `- ghcr-secret.yaml` here once it is filled and
+  # sops-encrypted. Keycloak cannot pull its image without it.
   - postgres.yaml
   - keycloak.yaml
   - cloudflare.yaml
