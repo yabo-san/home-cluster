@@ -1,0 +1,46 @@
+# Tunnel health, from cloudflared's own metrics (cloudflared-podmonitor.yaml).
+# The blackbox probes say "users cannot reach it"; these say why, and earlier.
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: tunnels
+  namespace: monitoring
+  labels:
+    role: alert-rules
+spec:
+  groups:
+    - name: tunnels
+      rules:
+        - alert: TunnelEdgeConnectionsLow
+          # Each connector holds 4 connections to Cloudflare's edge. Fewer than
+          # 2 across a tunnel's replicas means one more drop takes it offline.
+          expr: |
+            sum by (namespace, tunnel) (cloudflared_tunnel_ha_connections) < 2
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: "Tunnel {{ $labels.tunnel }} has {{ $value }} edge connection(s)"
+            runbook: "kubectl -n {{ $labels.namespace }} logs -l app=cloudflared-{{ $labels.tunnel }} --tail=50. Usual cause: the home connection or DNS; both replicas share it. Record: INC0044914."
+
+        - alert: TunnelDown
+          expr: |
+            sum by (namespace, tunnel) (cloudflared_tunnel_ha_connections) == 0
+          for: 2m
+          labels:
+            severity: critical
+          annotations:
+            summary: "Tunnel {{ $labels.tunnel }} has no edge connections; its hostname is offline"
+            runbook: "Check the home internet first (every tunnel drops together). One tunnel alone: kubectl -n {{ $labels.namespace }} rollout restart deploy/cloudflared."
+
+        - alert: TunnelOriginErrors
+          # The tunnel is up but the app behind it answers badly: 5xx or
+          # unreachable origin, as seen at the edge.
+          expr: |
+            sum by (namespace, tunnel) (rate(cloudflared_tunnel_request_errors[5m])) > 0.05
+          for: 10m
+          labels:
+            severity: warning
+          annotations:
+            summary: "Tunnel {{ $labels.tunnel }}: {{ $value | humanize }} origin errors/s"
+            runbook: "The app behind the tunnel is failing or not Ready (Drop during imports, INC0044915). kubectl -n {{ $labels.namespace }} get pods."

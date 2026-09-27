@@ -12,6 +12,8 @@ resources:
   - environment-rules.yaml
   - flux-rules.yaml
   - incident-rules.yaml
+  - tunnel-rules.yaml
+  - cloudflared-podmonitor.yaml
   - flux-podmonitor.yaml
   - jellyfin-rules.yaml
   - loki-datasource.yaml
