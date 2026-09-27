@@ -20,45 +20,9 @@ spec:
     config:
       clients:
         - url: http://loki:3100/loki/api/v1/push
-      snippets:
-        # The node journal: kernel messages, systemd units, host cron. Pod logs
-        # alone missed every host-level signal of INC0044913 (memory pressure,
-        # journald watchdog, the BPF warning), INC0044912 and INC0044907 (a
-        # host cron job). CHG0030485. Both nodes keep a persistent journal
-        # since CHG0030469.
-        extraScrapeConfigs: |
-          - job_name: node-journal
-            journal:
-              path: /var/log/journal
-              max_age: 12h
-              labels:
-                job: node-journal
-            relabel_configs:
-              - source_labels: [__journal__systemd_unit]
-                target_label: unit
-              - source_labels: [__journal__transport]
-                target_label: transport
-              - source_labels: [__journal__hostname]
-                target_label: node
-              - source_labels: [__journal_priority_keyword]
-                target_label: level
-    extraVolumes:
-      - name: journal
-        hostPath:
-          path: /var/log/journal
-      - name: machine-id
-        hostPath:
-          path: /etc/machine-id
-    extraVolumeMounts:
-      - name: journal
-        mountPath: /var/log/journal
-        readOnly: true
-      - name: machine-id
-        mountPath: /etc/machine-id
-        readOnly: true
     resources:
       requests:
         cpu: 50m
         memory: 64Mi
       limits:
-        memory: 192Mi   # +64Mi for the journal reader
+        memory: 128Mi
