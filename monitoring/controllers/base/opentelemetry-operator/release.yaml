@@ -1,0 +1,58 @@
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: opentelemetry-operator
+  namespace: monitoring
+spec:
+  interval: 30m
+  chart:
+    spec:
+      chart: opentelemetry-operator
+      version: "0.123.1"
+      sourceRef:
+        kind: HelmRepository
+        name: open-telemetry
+        namespace: monitoring
+      interval: 12h
+  install:
+    remediation:
+      retries: 3
+  upgrade:
+    remediation:
+      retries: 3
+  values:
+    # CHG0030481: traces for apps that do not export them natively, without a
+    # node agent. The operator watches for the
+    # `instrumentation.opentelemetry.io/inject-<lang>` pod annotation and, at
+    # admission, adds an init container that copies the language SDK into the
+    # pod plus the env (NODE_OPTIONS, PYTHONPATH, JAVA_TOOL_OPTIONS) that loads
+    # it. Nothing runs outside the annotated pod; its memory counts against
+    # that pod's own limit. This is the opposite shape of Beyla (CHG0030464,
+    # a privileged per-node eBPF DaemonSet), which took the control-plane node
+    # down in INC0044913.
+    manager:
+      # Required by the chart; we run no collectors (apps export straight to
+      # Tempo), but the value must be set.
+      collectorImage:
+        repository: otel/opentelemetry-collector-k8s
+      resources:
+        requests:
+          cpu: 20m
+          memory: 64Mi
+        limits:
+          memory: 256Mi
+    # Keep it off the control-plane node, which is the one without headroom.
+    nodeSelector:
+      kubernetes.io/hostname: workernode
+    admissionWebhooks:
+      # No cert-manager on this cluster; the chart generates and rotates a
+      # self-signed cert for its own webhook.
+      certManager:
+        enabled: false
+      autoGenerateCert:
+        enabled: true
+        recreate: false
+      # If the operator is down, pods must still be admitted (uninstrumented)
+      # rather than blocked. Fail-open is the right default for a lab whose
+      # operator lives on the node that is not the control plane.
+      failurePolicy: Ignore
