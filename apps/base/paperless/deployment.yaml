@@ -15,10 +15,6 @@ spec:
     metadata:
       labels:
         app: paperless
-      annotations:
-        # CHG0030481: Python SDK injected by the OpenTelemetry Operator; loads in
-        # every Python process in the container (web, task worker, consumer).
-        instrumentation.opentelemetry.io/inject-python: "monitoring/low-traffic"
     spec:
       # The image starts as root and drops to UID 1000 itself (gosu), so do NOT
       # set runAsUser here. fsGroup is what makes the PVCs writable by that user.
