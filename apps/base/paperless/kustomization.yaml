@@ -6,3 +6,4 @@ resources:
   - redis.yaml
   - deployment.yaml
   - service.yaml
+  - redis-exporter.yaml

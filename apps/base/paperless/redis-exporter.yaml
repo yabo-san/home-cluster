@@ -1,0 +1,60 @@
+# Metrics exporter for Paperless's Redis (the task queue) (CHG0030484). A separate Deployment, not a sidecar,
+# so adding or removing it never restarts the database. Runs on workernode to
+# keep its memory off thinkserver; it reaches the database over its Service.
+# Scraped by the `db-exporters` PodMonitor in monitoring.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: paperless-redis-exporter
+  namespace: paperless
+  labels:
+    app: paperless-redis-exporter
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: paperless-redis-exporter
+  template:
+    metadata:
+      labels:
+        app: paperless-redis-exporter
+        app.kubernetes.io/component: db-exporter
+        db: paperless-redis
+    spec:
+      nodeSelector:
+        kubernetes.io/hostname: workernode
+      enableServiceLinks: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65534
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: exporter
+          image: oliver006/redis_exporter:v1.92.0
+          env:
+            - name: REDIS_ADDR
+              value: "redis://paperless-redis:6379"
+            # Paperless's task queue is the `celery` list in db 0; report its
+            # length as redis_key_size so a backlog can alert.
+            - name: REDIS_EXPORTER_CHECK_SINGLE_KEYS
+              value: "db0=celery"
+          ports:
+            - name: metrics
+              containerPort: 9121
+          readinessProbe:
+            httpGet:
+              path: /metrics
+              port: metrics
+            periodSeconds: 30
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: [ALL]
+          resources:
+            requests:
+              cpu: 10m
+              memory: 24Mi
+            limits:
+              memory: 96Mi

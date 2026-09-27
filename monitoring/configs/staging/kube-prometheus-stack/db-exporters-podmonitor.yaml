@@ -1,0 +1,19 @@
+# The four database exporters (CHG0030484), found by label across namespaces.
+# `db` identifies which database a series belongs to in alerts and dashboards.
+apiVersion: monitoring.coreos.com/v1
+kind: PodMonitor
+metadata:
+  name: db-exporters
+  namespace: monitoring
+spec:
+  namespaceSelector:
+    any: true
+  selector:
+    matchLabels:
+      app.kubernetes.io/component: db-exporter
+  podMetricsEndpoints:
+    - port: metrics
+      interval: 30s
+      relabelings:
+        - sourceLabels: [__meta_kubernetes_pod_label_db]
+          targetLabel: db
