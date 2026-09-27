@@ -6,6 +6,7 @@ resources:
   - grafana-admin-secret.yaml
   - grafana-oidc-secret.yaml
   - grafana-smtp-secret.yaml
+  - deadmans-switch-secret.yaml
   - homelab-storage-rules.yaml
   - synthetic-rules.yaml
   - environment-rules.yaml

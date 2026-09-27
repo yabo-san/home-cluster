@@ -207,6 +207,10 @@ spec:
       alertmanagerSpec:
         secrets:
           - grafana-smtp   # mounted at /etc/alertmanager/secrets/grafana-smtp/
+          # healthchecks.io ping URL for the dead man's switch (CHG0030468). A
+          # file, not a value in this public chart config: anyone with the URL
+          # can fake "alive".
+          - deadmans-switch   # mounted at /etc/alertmanager/secrets/deadmans-switch/
       config:
         global:
           smtp_smarthost: "smtp.protonmail.ch:587"
@@ -221,8 +225,17 @@ spec:
           group_interval: 5m
           repeat_interval: 4h
           routes:
+            # Dead man's switch (CHG0030468, corrective action for INC0044913).
+            # Watchdog always fires; every minute it is posted to an external
+            # heartbeat. If Prometheus, Alertmanager, this node or the network
+            # dies, the pings stop and healthchecks.io emails after 5 minutes.
+            # Alerting that lives inside the estate cannot report the estate's
+            # death; this is the one alert that fails outward.
             - matchers: ['alertname = "Watchdog"']
-              receiver: "null"
+              receiver: deadmans-switch
+              group_wait: 0s
+              group_interval: 1m
+              repeat_interval: 1m
             - matchers: ['severity = "critical"']
               receiver: email
             # Warnings were falling through to the "null" root receiver, so
@@ -238,6 +251,10 @@ spec:
               - to: "kevin@y4bo.com"
                 send_resolved: true   
           - name: "null"
+          - name: deadmans-switch
+            webhook_configs:
+              - url_file: /etc/alertmanager/secrets/deadmans-switch/url
+                send_resolved: false
         inhibit_rules:
           - source_matchers: ['severity = "critical"']
             target_matchers: ['severity = "warning"']
