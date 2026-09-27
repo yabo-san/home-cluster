@@ -1,0 +1,241 @@
+# Incident-shape alerts: one rule per failure this cluster actually had in the
+# week of 2026-09-22 and that the stock rules missed or caught too late. The
+# stock kube-prometheus-stack rules are sized for large clusters (15-minute
+# windows, percentage thresholds that a 7.7 GB node never reaches before it is
+# unusable). These are sized for two nodes and one operator.
+#
+# Each annotation names the record the rule comes from (grifting/tickets), so the
+# alert email says which past incident it is the early warning for.
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: incident-shapes
+  namespace: monitoring
+  labels:
+    role: alert-rules
+spec:
+  groups:
+    - name: incident-shapes.node
+      rules:
+        - alert: NodeMemoryAvailableLow
+          # INC0044913: MemAvailable went 2,045 MB -> 867 MB (11%) an hour before
+          # the node stopped answering. Nothing fired. 15% of total for 10m is
+          # the point where the kubelet eviction (CHG0030470) is about to act.
+          expr: |
+            node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes < 0.15
+          for: 10m
+          labels:
+            severity: warning
+          annotations:
+            summary: "{{ $labels.instance }} has {{ $value | humanizePercentage }} memory available"
+            runbook: "kubectl top pods -A --sort-by=memory | head. Eviction fires at 900Mi/500Mi (thinkserver) or 600Mi/300Mi (workernode). Move or trim the top consumer before it does. Record: INC0044913, CHG0030470."
+
+        - alert: NodeMemoryAvailableCritical
+          expr: |
+            node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes < 0.08
+          for: 3m
+          labels:
+            severity: critical
+          annotations:
+            summary: "{{ $labels.instance }} has {{ $value | humanizePercentage }} memory available, eviction imminent"
+            runbook: "Same as NodeMemoryAvailableLow, now. If swap is still enabled on this node it will start thrashing instead of failing fast. Record: INC0044913."
+
+        - alert: NodeSwapping
+          # INC0044913 was swap thrash: swap used climbed 221 MB -> 3,984 MB and
+          # the kernel never OOM-killed anything. Any sustained page-in/out rate
+          # on these nodes is the outage starting.
+          expr: |
+            rate(node_vmstat_pswpin[5m]) + rate(node_vmstat_pswpout[5m]) > 100
+          for: 5m
+          labels:
+            severity: critical
+          annotations:
+            summary: "{{ $labels.instance }} is swapping ({{ $value | humanize }} pages/s for 5m)"
+            runbook: "This is the INC0044913 shape. Find the growing pod (kubectl top pods -A --sort-by=memory), delete or scale it, then finish CHG0030470 (swap off) on this node."
+
+        - alert: NodeSwapInUse
+          expr: |
+            (node_memory_SwapTotal_bytes - node_memory_SwapFree_bytes) > 1024 * 1024 * 1024
+          for: 30m
+          labels:
+            severity: warning
+          annotations:
+            summary: "{{ $labels.instance }} has {{ $value | humanize1024 }}B in swap"
+            runbook: "Memory has been over-committed for a while. Thinkserver still has swap on by design (CHG0030470 deferred swap-off); this says it is time to take memory off the node."
+
+        - alert: NodeIOWaitHigh
+          # INC0044915: iowait 33% on thinkserver while Drop imports and a bulk
+          # copy shared the one disk with the k3s datastore; the API timed out
+          # and the node went NotReady. No rule watched iowait.
+          expr: |
+            avg by (instance) (rate(node_cpu_seconds_total{mode="iowait"}[5m])) > 0.25
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: "{{ $labels.instance }} iowait {{ $value | humanizePercentage }} for 5m"
+            runbook: "Disk saturation. On thinkserver the k3s datastore shares the disk: stop bulk copies and imports first. Record: INC0044915."
+
+        - alert: NodeUnreachableFast
+          # INC0044912: workernode stopped answering for 9 minutes; the stock
+          # KubeNodeNotReady waits 15. Node exporter missing for 2 minutes is
+          # enough on a LAN.
+          expr: |
+            up{job="node-exporter"} == 0
+          for: 2m
+          labels:
+            severity: critical
+          annotations:
+            summary: "{{ $labels.instance }} node exporter unreachable for 2m"
+            runbook: "ping the LAN address, then the tailnet one. If neither answers it is a stall or a panic: CHG0030469 reboots on a panic within 10s; a stall needs the power button. Record: INC0044912, INC0044913."
+
+        - alert: HostOOMKill
+          expr: |
+            increase(node_vmstat_oom_kill[15m]) > 0
+          for: 0m
+          labels:
+            severity: warning
+          annotations:
+            summary: "{{ $labels.instance }}: the kernel OOM-killed {{ $value }} process(es) in 15m"
+            runbook: "journalctl -k | grep -i 'out of memory' on the node for the victim. If the victim was not the growing pod, the limits are wrong. Record: INC0044913 (the only OOM kill of the outage came 10 hours in)."
+
+    - name: incident-shapes.kubernetes
+      rules:
+        - alert: PodRestartStorm
+          # INC0044909: Tempo restarted 47 times overnight (liveness kills, exit
+          # 137) and KubePodCrashLooping never fired: its rate threshold assumes
+          # short backoffs. Count restarts instead.
+          expr: |
+            increase(kube_pod_container_status_restarts_total[30m]) > 3
+          for: 0m
+          labels:
+            severity: warning
+          annotations:
+            summary: "{{ $labels.namespace }}/{{ $labels.pod }} restarted {{ $value | humanize }} times in 30m"
+            runbook: "kubectl -n {{ $labels.namespace }} describe pod {{ $labels.pod }}: Last State and Reason. Exit 137 with no OOMKilled reason = a liveness probe killing it (Tempo, INC0044909; MariaDB, CHG0030426). Add a startupProbe or raise the limit."
+
+        - alert: ContainerOOMKilled
+          expr: |
+            (sum by (namespace, pod, container) (increase(kube_pod_container_status_restarts_total[30m])) > 0)
+            and on (namespace, pod, container)
+            (kube_pod_container_status_last_terminated_reason{reason="OOMKilled"} == 1)
+          for: 0m
+          labels:
+            severity: warning
+          annotations:
+            summary: "{{ $labels.namespace }}/{{ $labels.container }} was OOMKilled"
+            runbook: "Compare container_memory_working_set_bytes against the limit over the last hour. If it grows with load (Tempo WAL, RomM scan) the limit is wrong; if it grows without load it is a leak."
+
+        - alert: PodEvicted
+          # CHG0030470 turned eviction on. Every eviction is now a signal that
+          # the node was about to repeat INC0044913, and it must be read.
+          expr: |
+            kube_pod_status_reason{reason="Evicted"} == 1
+          for: 0m
+          labels:
+            severity: warning
+          annotations:
+            summary: "{{ $labels.namespace }}/{{ $labels.pod }} was evicted by the kubelet"
+            runbook: "The node crossed its memory eviction threshold. This is the fix from CHG0030470 working; the follow-up is deciding which workload to move or cap. kubectl -n {{ $labels.namespace }} delete pod {{ $labels.pod }} to clear the record once read."
+
+        - alert: DeploymentUnavailable
+          # INC0044915: Drop answered 502 through the tunnel for the whole
+          # import because its readiness probe failed. Stock rule needs 15m.
+          expr: |
+            kube_deployment_status_replicas_unavailable > 0
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: "{{ $labels.namespace }}/{{ $labels.deployment }} has {{ $value }} unavailable replica(s) for 5m"
+            runbook: "kubectl -n {{ $labels.namespace }} get pods; describe the one not Ready. Readiness failing under load is a symptom (Drop during imports, INC0044915), not a crash."
+
+        - alert: CronJobNotSucceeding
+          # INC0044907 (392 failed nights, nobody told) and the keycloak-welcome
+          # DNS failures (CHG0030482): a CronJob that has not succeeded in 6h
+          # while it is scheduled at least hourly is broken, whatever its Job
+          # objects say.
+          expr: |
+            (time() - kube_cronjob_status_last_successful_time) > 6 * 3600
+          for: 10m
+          labels:
+            severity: warning
+          annotations:
+            summary: "CronJob {{ $labels.namespace }}/{{ $labels.cronjob }} has not succeeded in {{ $value | humanizeDuration }}"
+            runbook: "kubectl -n {{ $labels.namespace }} get jobs --sort-by=.metadata.creationTimestamp | tail; logs of the last pod. Record: INC0044907, CHG0030482."
+
+        - alert: PersistentVolumeAlmostFull
+          # INC0044910: Prometheus had no volume at all. Now that it has one,
+          # and every database is on local-path, 85% is the last warning before
+          # KubePersistentVolumeFillingUp's 3%-free critical. Prometheus is
+          # excluded: retentionSize keeps it at 80% by design.
+          expr: |
+            kubelet_volume_stats_used_bytes{persistentvolumeclaim!~"prometheus-.*"}
+              / kubelet_volume_stats_capacity_bytes > 0.85
+          for: 15m
+          labels:
+            severity: warning
+          annotations:
+            summary: "PVC {{ $labels.namespace }}/{{ $labels.persistentvolumeclaim }} is {{ $value | humanizePercentage }} full"
+            runbook: "Databases and object stores on local-path cannot grow in place: back up, resize the PVC (local-path does not support online expansion), restore. Plan it now, not at 97%."
+
+        - alert: APIServerSlow
+          # INC0044915: kubectl TLS handshake timeouts for minutes before the
+          # node went NotReady. The API is the first thing to slow when the
+          # datastore disk saturates.
+          expr: |
+            histogram_quantile(0.99, sum by (le) (rate(apiserver_request_duration_seconds_bucket{verb!~"WATCH|CONNECT",subresource!="log"}[5m]))) > 2
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: "Kubernetes API p99 latency {{ $value | humanizeDuration }} for 5m"
+            runbook: "Check NodeIOWaitHigh and NodeMemoryAvailableLow on thinkserver first; the API shares its disk and memory. Record: INC0044915."
+
+    - name: incident-shapes.services
+      rules:
+        - alert: ServiceErrorRateHigh
+          # "This service is giving 500s." From span metrics, so it covers every
+          # traced service (RomM, Keycloak, and whatever CHG0030481 adds) with
+          # no per-app rule. Needs real traffic (0.1 rps) so an idle service
+          # with one failed call does not page.
+          expr: |
+            (
+              sum by (service) (rate(traces_spanmetrics_calls_total{span_kind="SPAN_KIND_SERVER",status_code="STATUS_CODE_ERROR"}[5m]))
+              / sum by (service) (rate(traces_spanmetrics_calls_total{span_kind="SPAN_KIND_SERVER"}[5m]))
+            ) > 0.05
+            and sum by (service) (rate(traces_spanmetrics_calls_total{span_kind="SPAN_KIND_SERVER"}[5m])) > 0.1
+          for: 10m
+          labels:
+            severity: warning
+          annotations:
+            summary: "{{ $labels.service }} error rate {{ $value | humanizePercentage }} for 10m"
+            runbook: "Grafana > <service> APM > Slowest endpoints, then Tempo: search service={{ $labels.service }} status=error and open a trace. The failing span names the dependency."
+
+        - alert: ServiceTrafficSpike
+          # "A big ingress of traffic should light the tools up." INC0044909:
+          # RomM's library scan produced 20 spans/s at 100% sampling and filled
+          # a Tempo block. Five times the previous hour's rate, sustained.
+          expr: |
+            sum by (service) (rate(traces_spanmetrics_calls_total{span_kind="SPAN_KIND_SERVER"}[5m]))
+              > 5 * sum by (service) (rate(traces_spanmetrics_calls_total{span_kind="SPAN_KIND_SERVER"}[1h] offset 1h))
+            and sum by (service) (rate(traces_spanmetrics_calls_total{span_kind="SPAN_KIND_SERVER"}[5m])) > 2
+          for: 10m
+          labels:
+            severity: warning
+          annotations:
+            summary: "{{ $labels.service }} traffic {{ $value | humanize }} req/s, over 5x the previous hour"
+            runbook: "Expected (a scan, an import, a friend browsing)? Then check Tempo memory and the node. Unexpected? Check the tunnel logs for the source. Record: INC0044909."
+
+        - alert: TracesStoppedFlowing
+          # The APM boards went blank for a day after Beyla was removed and
+          # nothing said so (2026-09-27). If Tempo stops receiving spans from
+          # every service at once, the pipeline is broken, not the apps.
+          expr: |
+            sum(rate(traces_spanmetrics_calls_total[15m])) == 0
+          for: 30m
+          labels:
+            severity: warning
+          annotations:
+            summary: "No spans reached Tempo in 30m; APM and the service map are blind"
+            runbook: "kubectl -n monitoring get pods -l app.kubernetes.io/name=tempo; then the OTLP env on RomM and Keycloak. Record: CHG0030464 rollback, CHG0030481."

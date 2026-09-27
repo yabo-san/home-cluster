@@ -11,6 +11,7 @@ resources:
   - synthetic-rules.yaml
   - environment-rules.yaml
   - flux-rules.yaml
+  - incident-rules.yaml
   - flux-podmonitor.yaml
   - jellyfin-rules.yaml
   - loki-datasource.yaml
