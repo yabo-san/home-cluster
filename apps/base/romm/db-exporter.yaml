@@ -39,6 +39,9 @@ spec:
             - "--mysqld.address=romm-db:3306"
             - "--mysqld.username=romm-user"
             - "--no-collect.slave_status"
+            # Need the PROCESS privilege, which the app user does not have.
+            - "--no-collect.info_schema.innodb_cmp"
+            - "--no-collect.info_schema.innodb_cmpmem"
           env:
             - name: MYSQLD_EXPORTER_PASSWORD
               valueFrom:
