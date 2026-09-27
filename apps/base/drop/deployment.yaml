@@ -58,6 +58,16 @@ spec:
               value: games
             - name: TZ
               value: America/Los_Angeles
+          env:
+            # Drop sees a few requests a minute; at the shared 5% sample rate its
+            # APM board stays empty for hours. Full sampling here costs Tempo
+            # nothing at this traffic. The injector leaves an env var alone when
+            # the container already defines it, so this overrides the
+            # Instrumentation's ratio for Drop only.
+            - name: OTEL_TRACES_SAMPLER
+              value: parentbased_traceidratio
+            - name: OTEL_TRACES_SAMPLER_ARG
+              value: "1.0"
           envFrom:
             # DATABASE_URL (carries the password) and OIDC_CLIENT_SECRET.
             - secretRef:
