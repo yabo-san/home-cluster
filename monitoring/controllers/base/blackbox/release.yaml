@@ -37,3 +37,13 @@ spec:
             preferred_ip_protocol: ip4
             valid_status_codes: [200, 204, 301, 302, 303, 307, 308, 401, 403]
             fail_if_not_ssl: true   # require HTTPS → also yields cert-expiry metrics
+        # Same as http_up for LAN-only services that have no TLS (Shelfmark on
+        # gooselab). http_up requires HTTPS, which fails any http:// target.
+        http_up_lan:
+          prober: http
+          timeout: 8s
+          http:
+            method: GET
+            follow_redirects: true
+            preferred_ip_protocol: ip4
+            valid_status_codes: [200, 204, 301, 302, 303, 307, 308, 401, 403]

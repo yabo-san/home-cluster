@@ -304,14 +304,19 @@ spec:
                   - https://request.gonse.org
                   - https://read.gonse.org
                   - https://listen.gonse.org
-                  # gooselab, LAN: Shelfmark (library.gonse.org is IP-gated)
-                  - http://192.168.4.66:8084
                   # this cluster, via Cloudflare tunnels
                   - https://monitoring.y4bo.com
                   - https://id.y4bo.com
                   - https://login.y4bo.com
                   - https://rom.y4bo.com
                   - https://gaben.y4bo.com
+              # gooselab, LAN: Shelfmark (library.gonse.org is IP-gated). Plain HTTP,
+              # so it uses the http_up_lan module; __param_module overrides the
+              # job-wide module for this target only.
+              - targets:
+                  - http://192.168.4.66:8084
+                labels:
+                  __param_module: http_up_lan
             relabel_configs:
               - source_labels: [__address__]
                 target_label: __param_target
