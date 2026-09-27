@@ -104,6 +104,10 @@ spec:
     metadata:
       labels:
         app: homepage
+      annotations:
+        # CHG0030481: Node SDK injected by the OpenTelemetry Operator. Homepage
+        # is Next.js; low traffic, so every trace is kept.
+        instrumentation.opentelemetry.io/inject-nodejs: "monitoring/low-traffic"
     spec:
       # Homepage copies its skeleton config files into /app/config on boot, which
       # fails if that dir is a read-only ConfigMap mount. So: seed OUR config from
@@ -136,7 +140,7 @@ spec:
               cpu: 50m
               memory: 128Mi
             limits:
-              memory: 256Mi
+              memory: 384Mi   # +128Mi for the trace SDK (CHG0030481)
       volumes:
         - name: config-src
           configMap:
