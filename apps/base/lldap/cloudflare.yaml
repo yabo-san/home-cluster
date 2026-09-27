@@ -1,0 +1,67 @@
+# Cloudflare tunnel for users.y4bo.com (CHG0030487). It routes to lldap-admin-proxy
+# (the platform-admin gate), NOT to LLDAP directly, so the first request from the
+# internet already hits authentication. LDAP (3890) is never on this tunnel.
+# Its own tunnel, one per namespace like the others; app label cloudflared-lldap is
+# listed in the cloudflared PodMonitor.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cloudflared
+  namespace: lldap
+spec:
+  selector:
+    matchLabels:
+      app: cloudflared-lldap
+  replicas: 2
+  template:
+    metadata:
+      labels:
+        app: cloudflared-lldap
+    spec:
+      containers:
+        - name: cloudflared
+          image: cloudflare/cloudflared:latest
+          args: ["tunnel", "--config", "/etc/cloudflared/config/config.yaml", "run"]
+          livenessProbe:
+            httpGet:
+              path: /ready
+              port: 2000
+            # 3, not 1. A single missed probe was restarting the tunnel on
+            # any transient blip talking to Cloudflare's edge.
+            failureThreshold: 3
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          volumeMounts:
+            - name: config
+              mountPath: /etc/cloudflared/config
+              readOnly: true
+            - name: creds
+              mountPath: /etc/cloudflared/creds
+              readOnly: true
+      volumes:
+        - name: creds
+          secret:
+            secretName: tunnel-credentials
+        - name: config
+          configMap:
+            name: cloudflared
+            items:
+              - key: config.yaml
+                path: config.yaml
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: cloudflared
+  namespace: lldap
+data:
+  config.yaml: |
+    # cloudflared tunnel create lldap   (then route: users.y4bo.com)
+    tunnel: lldap
+    credentials-file: /etc/cloudflared/creds/credentials.json
+    metrics: 0.0.0.0:2000
+    no-autoupdate: true
+    ingress:
+    - hostname: users.y4bo.com
+      service: http://lldap-admin-proxy:4180
+    - service: http_status:404

@@ -6,3 +6,7 @@ resources:
   - deployment.yaml
   - service.yaml
   - service-admin.yaml
+  # CHG0030487: users.y4bo.com, LLDAP admin behind Keycloak (platform-admin only).
+  # See USERS-PORTAL.md for the manual steps before this can merge.
+  - oauth2-proxy.yaml
+  - cloudflare.yaml

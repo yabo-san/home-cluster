@@ -327,6 +327,9 @@ spec:
                   - https://login.y4bo.com
                   - https://rom.y4bo.com
                   - https://gaben.y4bo.com
+                  # LLDAP admin behind oauth2-proxy (CHG0030487). No session means
+                  # a 302 to Keycloak's login page, which http_up follows to a 200.
+                  - https://users.y4bo.com
             relabel_configs:
               - source_labels: [__address__]
                 target_label: __param_target

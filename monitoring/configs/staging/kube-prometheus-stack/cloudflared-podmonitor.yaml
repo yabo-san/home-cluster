@@ -1,6 +1,6 @@
-# Scrape every Cloudflare tunnel connector (two per tunnel, five tunnels). Each
-# already serves metrics on :2000 (`metrics: 0.0.0.0:2000` in its config.yaml,
-# the same port its liveness probe hits); nothing scraped them, so a tunnel
+# Scrape every Cloudflare tunnel connector (two per tunnel; cloudflared-lldap
+# added for users.y4bo.com, CHG0030487). Each already serves metrics on :2000
+# (`metrics: 0.0.0.0:2000` in its config.yaml, the same port its liveness probe hits); nothing scraped them, so a tunnel
 # that lost its edge connections only showed up as a failed blackbox probe
 # after users did (INC0044914, the home internet blip).
 apiVersion: monitoring.coreos.com/v1
@@ -15,7 +15,7 @@ spec:
     matchExpressions:
       - key: app
         operator: In
-        values: [cloudflared-drop, cloudflared-keycloak, cloudflared-portal, cloudflared-romm, cloudflared-grafana, cloudflared]
+        values: [cloudflared-drop, cloudflared-keycloak, cloudflared-portal, cloudflared-romm, cloudflared-grafana, cloudflared-lldap, cloudflared]
   podMetricsEndpoints:
     - targetPort: 2000
       path: /metrics
