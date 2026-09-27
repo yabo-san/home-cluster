@@ -51,6 +51,11 @@ spec:
             # Group-based admin, unlike RomM which can only do user/admin.
             - name: OIDC_ADMIN_GROUP
               value: platform-admin
+            # Only the games group (or platform-admin) can create a Drop account.
+            # Checked when the account is first created; existing accounts keep
+            # working.
+            - name: OIDC_USER_GROUP
+              value: games
             - name: TZ
               value: America/Los_Angeles
           envFrom:

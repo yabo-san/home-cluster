@@ -66,15 +66,19 @@ spec:
             # No default in the app. Must match the Keycloak client exactly.
             - name: OIDC_REDIRECT_URI
               value: https://rom.y4bo.com/api/oauth/openid
-            # The access gate. Default "true" auto-creates an account for any
-            # Keycloak user; accounts are created by hand instead
+            # The access gate is the LLDAP group, read from the "groups" claim
+            # (Keycloak romm client, oidc-group-membership-mapper). platform-admin
+            # = admin, roms = user, anyone else gets a 403 at login. With the group
+            # as the gate, RomM creates the account on first login, so inviting
+            # someone is: LLDAP user + email + groups, nothing in RomM.
             - name: OIDC_ALLOW_REGISTRATION
-              value: "false"
-            # Needs a groups claim mapper on the Keycloak client to do anything.
+              value: "true"
             - name: OIDC_CLAIM_ROLES
               value: groups
             - name: OIDC_ROLE_ADMIN
               value: platform-admin
+            - name: OIDC_ROLE_VIEWER
+              value: roms
 
             # In-browser players. Global switches, not permissions.
             # EmulatorJS on (retro consoles in the browser; accounts are made by
