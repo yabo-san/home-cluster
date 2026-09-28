@@ -27,12 +27,12 @@ spec:
       containers:
         - name: keycloak
           # Keycloak 26.0 + the y4bo theme, built in CI (landing-page repo); CHG0030486.
-          image: ghcr.io/yabo-san/keycloak-y4bo@sha256:c33865a44321bce7d57fa14ec5515d9934e4e6f4a612de891617744ccd81de64
+          image: quay.io/keycloak/keycloak:26.0   # themed image rolled back, INC0044918
           # --optimized: build options are baked into the image and must match the env below.
           # --import-realm imports any realm files under /opt/keycloak/data/import
           # on startup, but ONLY creates realms that don't already exist, so this
           # is safe to leave on across reboots (it won't clobber your edits).
-          args: ["start", "--optimized", "--import-realm"]
+          args: ["start", "--import-realm"]
           env:
             # --- Public URL / proxy (behind the tunnel) ---
             - name: KC_HOSTNAME
