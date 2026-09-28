@@ -85,6 +85,9 @@ spec:
           # Map Keycloak realm roles -> Grafana roles. Give yourself grafana-admin
           # in Keycloak and you land as an Admin; everyone else is a Viewer.
           role_attribute_path: "contains(realm_access.roles[*], 'grafana-admin') && 'Admin' || contains(realm_access.roles[*], 'grafana-editor') && 'Editor' || 'Viewer'"
+          # Only platform-admin gets in; other LLDAP users (friends in roms/games) are refused.
+          groups_attribute_path: groups
+          allowed_groups: platform-admin
           allow_sign_up: true
         smtp:
           enabled: true
