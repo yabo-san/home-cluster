@@ -1,8 +1,4 @@
-# Cloudflare tunnel for users.y4bo.com (CHG0030487). It routes to lldap-admin-proxy
-# (the platform-admin gate), NOT to LLDAP directly, so the first request from the
-# internet already hits authentication. LDAP (3890) is never on this tunnel.
-# Its own tunnel, one per namespace like the others; app label cloudflared-lldap is
-# listed in the cloudflared PodMonitor.
+# Tunnel for users.y4bo.com; routes to the proxy, never to LLDAP directly (CHG0030487).
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -26,8 +22,6 @@ spec:
             httpGet:
               path: /ready
               port: 2000
-            # 3, not 1. A single missed probe was restarting the tunnel on
-            # any transient blip talking to Cloudflare's edge.
             failureThreshold: 3
             initialDelaySeconds: 10
             periodSeconds: 10

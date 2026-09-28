@@ -1,10 +1,4 @@
-# oauth2-proxy in front of LLDAP's admin page for users.y4bo.com (CHG0030487).
-# Gate 1 of 2: only a Keycloak session whose "groups" claim contains lldap_admin
-# gets through; everyone else gets a 403 here and never sees LLDAP at all. Gate 2 is
-# LLDAP's own login, with each admin's own account in lldap_admin.
-# Same shape as apps/base/portal/oauth2-proxy.yaml; the differences are the client,
-# the upstream and the group gate. The tailnet path (service-admin.yaml) is
-# untouched and stays the owner's break-glass way in.
+# users.y4bo.com: Keycloak login + lldap_admin check before LLDAP's own login (CHG0030487).
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -28,12 +22,8 @@ spec:
               value: oidc
             - name: OAUTH2_PROXY_OIDC_ISSUER_URL
               value: https://id.y4bo.com/realms/y4bo
-            # Its own confidential client, not the portal's, so the redirect URI
-            # and the gate can be changed or revoked without touching login.y4bo.com.
             - name: OAUTH2_PROXY_CLIENT_ID
               value: lldap-admin
-            # Client secret + cookie seed come from the SOPS'd secret
-            # (apps/staging/lldap/proxy-secret.yaml).
             - name: OAUTH2_PROXY_CLIENT_SECRET
               valueFrom:
                 secretKeyRef:
@@ -46,8 +36,6 @@ spec:
                   key: cookie-secret
             - name: OAUTH2_PROXY_REDIRECT_URL
               value: https://users.y4bo.com/oauth2/callback
-            # The existing Service "lldap", port http. Cluster-internal, so the
-            # LAN externalIP and the tailnet externalIP are not in this path.
             - name: OAUTH2_PROXY_UPSTREAMS
               value: http://lldap:17170
             - name: OAUTH2_PROXY_HTTP_ADDRESS
@@ -56,17 +44,11 @@ spec:
               value: "*"
             - name: OAUTH2_PROXY_SCOPE
               value: openid email profile groups
-            # The gate. Plain group name, no leading slash: the groups mapper on
-            # this client must have "Full group path" off, same as romm and drop.
-            # lldap_admin, not platform-admin: "can manage users" is one checkbox in
-            # LLDAP and is a separate role from running the platform (owner,
-            # 2026-09-27). The same group opens gate 2, LLDAP's own login.
+            # Groups mapper on the client: "Full group path" off, as for romm and drop.
             - name: OAUTH2_PROXY_ALLOWED_GROUPS
               value: lldap_admin
             - name: OAUTH2_PROXY_COOKIE_SECURE
               value: "true"
-            # A separate cookie name from the portal's, so the two sessions on
-            # .y4bo.com never overwrite each other.
             - name: OAUTH2_PROXY_COOKIE_NAME
               value: _oauth2_proxy_users
             - name: OAUTH2_PROXY_REVERSE_PROXY

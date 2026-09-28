@@ -4,6 +4,5 @@ namespace: lldap
 resources:
   - ../../base/lldap
   - secret.yaml
-  # CHG0030487: add `- proxy-secret.yaml` and `- tunnel-secret.yaml` here once
-  # both are filled and sops-encrypted. Until then the proxy and tunnel pods
-  # cannot start (missing secrets), which is why this branch must not merge early.
+  # - proxy-secret.yaml    # CHG0030487, once encrypted
+  # - tunnel-secret.yaml   # CHG0030487, once encrypted
