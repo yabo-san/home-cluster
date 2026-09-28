@@ -1,4 +1,4 @@
-# users.y4bo.com: Keycloak login + lldap_admin check before LLDAP's own login (CHG0030487).
+# users.y4bo.com: Keycloak login + platform-admin check before LLDAP's own login (CHG0030487).
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -46,7 +46,7 @@ spec:
               value: openid email profile groups
             # Groups mapper on the client: "Full group path" off, as for romm and drop.
             - name: OAUTH2_PROXY_ALLOWED_GROUPS
-              value: lldap_admin
+              value: platform-admin   # our own role; lldap_* groups stay internal to LLDAP
             - name: OAUTH2_PROXY_COOKIE_SECURE
               value: "true"
             - name: OAUTH2_PROXY_COOKIE_NAME

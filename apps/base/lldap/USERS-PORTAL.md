@@ -17,8 +17,8 @@
    `apps/staging/lldap/kustomization.yaml` (the comment there marks the spot). Check both
    files show `ENC[` before committing.
 6. **LLDAP admins.** In LLDAP (tailnet, `http://100.99.35.21:17170`): create Goose's own
-   account if absent, add Goose and the owner's own account to `lldap_admin`. That one group opens
-   both gates. The built-in `admin` password is never shared.
+   account if absent, add Goose and the owner's own account to `lldap_admin` (LLDAP's own login)
+   and `platform-admin` (the gate). The built-in `admin` password is never shared.
 
 ## After merge: verify as three users
 
@@ -26,7 +26,7 @@
 | --- | --- |
 | no session | redirect to the Keycloak login at id.y4bo.com |
 | `roms`-only user | 403 from oauth2-proxy, LLDAP never reached |
-| `lldap_admin` | LLDAP's own login page; their own LLDAP account works |
+| `platform-admin` + `lldap_admin` | LLDAP's own login page; their own LLDAP account works |
 
 The blackbox probe `https://users.y4bo.com` (job blackbox-http) and the cloudflared
 PodMonitor (app `cloudflared-lldap`) should both go green within a few minutes.
