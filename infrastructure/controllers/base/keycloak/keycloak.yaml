@@ -8,6 +8,12 @@ metadata:
   namespace: keycloak
 spec:
   replicas: 1
+  # Replace, don't surge: the node has no room for two Keycloaks (~1 min SSO gap with --optimized).
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 0
+      maxUnavailable: 1
   selector:
     matchLabels:
       app: keycloak
