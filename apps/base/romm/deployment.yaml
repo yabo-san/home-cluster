@@ -108,8 +108,10 @@ spec:
             # Tempo with more spans than it could turn into a block.
             - name: OTEL_TRACES_SAMPLER
               value: parentbased_traceidratio
+            # 25%: enough traces for the APM board; a library scan still only sends a quarter.
+            # RomM names itself "api" in code regardless of OTEL_SERVICE_NAME (CHG0030494).
             - name: OTEL_TRACES_SAMPLER_ARG
-              value: "0.05"
+              value: "0.25"
 
             - name: TZ
               value: America/Los_Angeles
