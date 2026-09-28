@@ -22,7 +22,7 @@ spec:
         db: keycloak-postgres
     spec:
       nodeSelector:
-        kubernetes.io/hostname: workernode
+        kubernetes.io/hostname: thinkserver   # stateless; off the worker (CHG0030492)
       enableServiceLinks: false
       securityContext:
         runAsNonRoot: true

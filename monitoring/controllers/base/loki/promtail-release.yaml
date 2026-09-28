@@ -23,6 +23,6 @@ spec:
     resources:
       requests:
         cpu: 50m
-        memory: 64Mi
+        memory: 128Mi   # request = limit (CHG0030492)
       limits:
         memory: 128Mi

@@ -43,7 +43,7 @@ spec:
           memory: 256Mi
     # Keep it off the control-plane node, which is the one without headroom.
     nodeSelector:
-      kubernetes.io/hostname: workernode
+      kubernetes.io/hostname: thinkserver   # stateless; off the worker (CHG0030492)
     admissionWebhooks:
       # No cert-manager on this cluster; the chart generates and rotates a
       # self-signed cert for its own webhook.

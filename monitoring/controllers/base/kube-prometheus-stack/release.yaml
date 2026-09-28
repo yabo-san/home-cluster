@@ -206,8 +206,18 @@ spec:
     # Alertmanager — the routing/dedup/silencing layer for the Prometheus-native rules
     # (homelab-storage, synthetic). Reuses the Proton SMTP secret (mounted as a file) so
     # no token is duplicated. Silences here are the OSS equivalent of a New Relic "silence".
+    prometheus-node-exporter:
+      resources:
+        requests:
+          cpu: 20m
+          memory: 64Mi   # request = limit (CHG0030492)
+        limits:
+          memory: 64Mi
     alertmanager:
       alertmanagerSpec:
+        # Next to Prometheus: either one dying alone must not silence alerts (CHG0030492).
+        nodeSelector:
+          kubernetes.io/hostname: thinkserver
         secrets:
           - grafana-smtp   # mounted at /etc/alertmanager/secrets/grafana-smtp/
           # healthchecks.io ping URL for the dead man's switch (CHG0030468). A

@@ -58,9 +58,9 @@ spec:
           resources:
             requests:
               cpu: 100m
-              memory: 256Mi
+              memory: 256Mi   # request = limit (CHG0030492)
             limits:
-              memory: 512Mi
+              memory: 256Mi
           volumeMounts:
             - name: data
               mountPath: /var/lib/postgresql/data

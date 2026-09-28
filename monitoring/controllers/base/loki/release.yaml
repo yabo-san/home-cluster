@@ -73,9 +73,9 @@ spec:
       resources:
         requests:
           cpu: 100m
-          memory: 256Mi
+          memory: 320Mi   # request = limit (CHG0030492)
         limits:
-          memory: 768Mi
+          memory: 320Mi
     # Single-binary → scale the distributed roles to zero.
     read:
       replicas: 0
