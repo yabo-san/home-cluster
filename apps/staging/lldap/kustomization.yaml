@@ -4,5 +4,5 @@ namespace: lldap
 resources:
   - ../../base/lldap
   - secret.yaml
-  # - proxy-secret.yaml    # CHG0030487, once encrypted
-  # - tunnel-secret.yaml   # CHG0030487, once encrypted
+  - proxy-secret.yaml
+  - tunnel-secret.yaml
