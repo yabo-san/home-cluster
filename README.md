@@ -1,6 +1,11 @@
 # home-cluster
 
-k3s cluster managed with Flux CD. Public apps are reached through Cloudflare Tunnels.
+A self-hosted, open-source take on the SSO and observability I used in production (OneLogin, New Relic):
+Keycloak on an LLDAP directory for single sign-on, and Prometheus, Loki, Tempo and Grafana for metrics,
+logs, traces and APM.
+
+k3s cluster managed with Flux CD. Public apps are reached through Cloudflare Tunnels. Secrets are
+encrypted in the repo with SOPS + age and decrypted by Flux.
 
 ## Apps and how each is monitored
 
