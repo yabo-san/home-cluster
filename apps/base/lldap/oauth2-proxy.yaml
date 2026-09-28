@@ -1,5 +1,5 @@
 # oauth2-proxy in front of LLDAP's admin page for users.y4bo.com (CHG0030487).
-# Gate 1 of 2: only a Keycloak session whose "groups" claim contains platform-admin
+# Gate 1 of 2: only a Keycloak session whose "groups" claim contains lldap_admin
 # gets through; everyone else gets a 403 here and never sees LLDAP at all. Gate 2 is
 # LLDAP's own login, with each admin's own account in lldap_admin.
 # Same shape as apps/base/portal/oauth2-proxy.yaml; the differences are the client,
@@ -58,8 +58,11 @@ spec:
               value: openid email profile groups
             # The gate. Plain group name, no leading slash: the groups mapper on
             # this client must have "Full group path" off, same as romm and drop.
+            # lldap_admin, not platform-admin: "can manage users" is one checkbox in
+            # LLDAP and is a separate role from running the platform (owner,
+            # 2026-09-27). The same group opens gate 2, LLDAP's own login.
             - name: OAUTH2_PROXY_ALLOWED_GROUPS
-              value: platform-admin
+              value: lldap_admin
             - name: OAUTH2_PROXY_COOKIE_SECURE
               value: "true"
             # A separate cookie name from the portal's, so the two sessions on
