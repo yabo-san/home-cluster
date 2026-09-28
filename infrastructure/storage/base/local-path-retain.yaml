@@ -1,0 +1,16 @@
+# Same provisioner as k3s's built-in `local-path` class (which k3s installs
+# itself from /var/lib/rancher/k3s/server/manifests/local-storage.yaml, so it
+# is not in this repo), but `Retain` instead of `Delete`: deleting a claim, or a
+# Flux prune after removing its manifest, keeps the data on the node's disk.
+# Longhorn's `longhorn-retain` gave us that; removing Longhorn (c675f45)
+# silently took it away. Use this class for anything with state (CHG0030489).
+#
+# A claim's storageClassName is immutable, so existing claims keep `local-path`;
+# their PVs were switched to Retain directly (see the ticket). New claims use this.
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: local-path-retain
+provisioner: rancher.io/local-path
+reclaimPolicy: Retain
+volumeBindingMode: WaitForFirstConsumer
