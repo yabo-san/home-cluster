@@ -1,0 +1,80 @@
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: beyla
+  namespace: monitoring
+spec:
+  interval: 30m
+  chart:
+    spec:
+      chart: beyla
+      version: "1.16.11"
+      sourceRef:
+        kind: HelmRepository
+        name: grafana
+        namespace: monitoring
+      interval: 12h
+  install:
+    remediation:
+      retries: 3
+  upgrade:
+    remediation:
+      retries: 3
+  values:
+    # eBPF auto-instrumentation: one pod per node watches HTTP, gRPC and SQL
+    # calls from the kernel and sends spans to Tempo, so every app in the
+    # cluster lands on the Traces APM dashboard and service map with no image
+    # or code change. Same per-node pattern as node-exporter and promtail.
+    preset: application
+    config:
+      data:
+        attributes:
+          kubernetes:
+            enable: true
+        # Opt-in: only the namespaces listed here are instrumented. A new app
+        # gets APM by being added to this list. The platform namespaces stay
+        # out (instrumenting Tempo would trace Tempo receiving traces).
+        discovery:
+          instrument:
+            - k8s_namespace: "{romm,paperless,drop,lldap,portal,keycloak}"
+        # Spans only. Tempo's metrics-generator already turns spans into the
+        # RED metrics and service graph the dashboards read, so Beyla's own
+        # Prometheus metrics would be a second copy.
+        otel_traces_export:
+          endpoint: http://tempo.monitoring.svc.cluster.local:4317
+          # 5% of traces, same as RomM's own SDK. Beyla at 100% traced a RomM
+          # library scan at about 20 spans/s and Tempo restarted mid-block,
+          # the same pattern as the earlier Tempo crash loop.
+          sampler:
+            name: parentbased_traceidratio
+            arg: "0.05"
+        # Unsampled RED metrics for dashboards and alerts. Traces are sampled
+        # at 5% (above), so rates derived from spans read about 1/20 of real
+        # traffic; these count every request.
+        prometheus_export:
+          port: 9090
+          path: /metrics
+        # Group URLs into routes (/api/roms/{id}) so the endpoint label stays
+        # low-cardinality when an app has no route information of its own.
+        routes:
+          unmatched: heuristic
+    # thinkserver only. Within minutes of Beyla starting on workernode (kernel
+    # 7.0, Ubuntu 26.04, 3.4Gi) that node stopped heartbeating and answered no
+    # ping on LAN or tailnet from 22:40 to 22:49 UTC on 2026-09-26, with no
+    # reboot and no OOM kill. Not proven to be Beyla, but not worth the risk to
+    # the node that runs Keycloak until it is understood.
+    nodeSelector:
+      kubernetes.io/hostname: thinkserver
+    service:
+      enabled: true
+    serviceMonitor:
+      enabled: true
+      # Prometheus only selects ServiceMonitors carrying this label.
+      additionalLabels:
+        release: kube-prometheus-stack
+    resources:
+      requests:
+        cpu: 50m
+        memory: 128Mi
+      limits:
+        memory: 512Mi

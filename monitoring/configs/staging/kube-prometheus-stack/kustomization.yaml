@@ -91,6 +91,20 @@ configMapGenerator:
     options:
       labels:
         grafana_dashboard: "1"
+  # Gated off: no traces for paperless yet (CHG0030481). Uncomment when it emits spans.
+  # - name: grafana-dashboard-apm-paperless
+  #   files:
+  #     - dashboards/apm-paperless.json
+  #   options:
+  #     labels:
+  #       grafana_dashboard: "1"
+  # Gated off: no traces for lldap yet (CHG0030481). Uncomment when it emits spans.
+  # - name: grafana-dashboard-apm-lldap
+  #   files:
+  #     - dashboards/apm-lldap.json
+  #   options:
+  #     labels:
+  #       grafana_dashboard: "1"
   - name: grafana-dashboard-apm-keycloak
     files:
       - dashboards/apm-keycloak.json

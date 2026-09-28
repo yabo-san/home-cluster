@@ -6,3 +6,4 @@ resources:
   - blackbox
   - tempo
   - opentelemetry-operator
+  # - beyla   # rolled back after INC0044913 (CHG0030464); returns only as a canary per CHG0030488/0483
