@@ -2,6 +2,7 @@ apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 resources:
   - namespace.yaml
-  - homepage.yaml
-  - oauth2-proxy.yaml
+  # - homepage.yaml       # retired: the Keycloak portal replaces it (CHG0030486)
+  # - oauth2-proxy.yaml   # retired with Homepage (CHG0030486)
+  - redirect.yaml
   - cloudflare.yaml

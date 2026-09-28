@@ -60,5 +60,5 @@ data:
     no-autoupdate: true
     ingress:
     - hostname: login.y4bo.com
-      service: http://oauth2-proxy:4180
+      service: http://portal-redirect:8080
     - service: http_status:404
