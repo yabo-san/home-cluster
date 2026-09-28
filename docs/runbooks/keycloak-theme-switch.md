@@ -4,7 +4,7 @@ Run after the new image is live (`start --optimized` pod Ready, logins still wor
 stock theme). The theme is switched through the admin API because the realm JSON is only
 imported on first start; editing `realm-secret.yaml` changes nothing on a running realm.
 
-Placeholders: `<ADMIN_USER>` / `<ADMIN_PASSWORD>` are a master-realm admin, `<THEME>` is
+Placeholders: `<ADMIN_USER>` / `<ADMIN_PASSWORD>` are a master-realm admin, `y4bo` is
 the `themeName` from the theme repo's `vite.config.ts` (Keycloakify plugin options; it is
 also the theme folder name inside `keycloak-theme-y4bo.jar`).
 
@@ -28,7 +28,7 @@ The token lives 60 seconds by default; get a fresh one per step.
 curl -s "${H[@]}" "$KC/admin/serverinfo" | jq '.themes.login[].name, .themes.account[].name'
 ```
 
-`<THEME>` must appear in both lists. If it does not, stop: the jar is not in the image.
+`y4bo` must appear in both lists. If it does not, stop: the jar is not in the image.
 
 ## 2. Clients: Base URL and "Always display in UI"
 
@@ -53,7 +53,7 @@ Expect `204` for each. Harmless on the stock theme, so this step can run first o
 
 ```sh
 curl -s -o /dev/null -w '%{http_code}\n' -X PUT "${H[@]}" "$KC/admin/realms/y4bo" \
-  -d '{"loginTheme":"<THEME>","accountTheme":"<THEME>"}'
+  -d '{"loginTheme":"y4bo","accountTheme":"y4bo"}'
 ```
 
 Expect `204`. Then, in a private window: `https://id.y4bo.com/realms/y4bo/account` shows

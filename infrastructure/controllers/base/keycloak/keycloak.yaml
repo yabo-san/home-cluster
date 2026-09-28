@@ -16,22 +16,13 @@ spec:
       labels:
         app: keycloak
     spec:
-      # GHCR package is private; the pull secret is ghcr-secret.yaml (CHG0030486).
-      imagePullSecrets:
-        - name: ghcr-pull
+      # imagePullSecrets:   # only if the GHCR package goes private again (ghcr-secret.yaml)
+      #   - name: ghcr-pull
       containers:
         - name: keycloak
-          # Our own image: quay.io/keycloak/keycloak:26.0 plus the y4bo theme jar,
-          # with `kc.sh build` already run in CI (theme repo, build-image workflow).
-          # Pinned by digest so a new push to :latest never restarts login for
-          # everyone. Renovate has no GHCR hostRule yet, so it cannot see this
-          # private package; digest bumps are by hand until it does (CHG0030486).
-          image: ghcr.io/yabo-san/keycloak-y4bo@sha256:REPLACE_WITH_DIGEST
-          # --optimized skips the Quarkus build on start (was ~4 minutes, the long
-          # pole of the INC0044917 recovery). It trusts the build-time options
-          # baked into the image: KC_FEATURES, KC_TRACING_ENABLED, KC_DB and
-          # KC_HEALTH_ENABLED below must match the theme repo's Dockerfile.
-          #
+          # Keycloak 26.0 + the y4bo theme, built in CI (landing-page repo); CHG0030486.
+          image: ghcr.io/yabo-san/keycloak-y4bo@sha256:c33865a44321bce7d57fa14ec5515d9934e4e6f4a612de891617744ccd81de64
+          # --optimized: build options are baked into the image and must match the env below.
           # --import-realm imports any realm files under /opt/keycloak/data/import
           # on startup, but ONLY creates realms that don't already exist, so this
           # is safe to leave on across reboots (it won't clobber your edits).
