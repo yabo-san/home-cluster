@@ -28,7 +28,7 @@ spec:
         - name: keycloak
           # Keycloak 26.0 + the y4bo theme, built in CI (landing-page repo); CHG0030486.
           # Build options verified with kc.sh show-config against this env (INC0044918 fix).
-          image: ghcr.io/yabo-san/keycloak-y4bo@sha256:798f76e7f7df25d615d8f41c3753aa93299aeead70b087d4cf457f3cde286912
+          image: ghcr.io/yabo-san/keycloak-y4bo@sha256:bffdea24346ac23fee96627a0ddc72766a4d24b89925065f6587a82289f25505
           # --optimized: build options are baked into the image and must match the env below.
           # --import-realm imports any realm files under /opt/keycloak/data/import
           # on startup, but ONLY creates realms that don't already exist, so this
