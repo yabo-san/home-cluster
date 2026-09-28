@@ -6,14 +6,14 @@ ports), secrets encrypted with **SOPS/age**, monitoring as code.
 
 ## Services
 
-| URL | What | Access |
-|---|---|---|
-| `login.y4bo.com` | the portal: each user sees the apps their groups allow | Keycloak |
-| `id.y4bo.com` | Keycloak (realm `y4bo`, custom theme) | the identity provider |
-| `users.y4bo.com` | LLDAP admin (create users, assign groups) | Keycloak + `platform-admin`, then LLDAP login |
-| `monitoring.y4bo.com` | Grafana | Keycloak, `platform-admin` only |
-| `rom.y4bo.com` | RomM | Keycloak, group `roms` |
-| `gaben.y4bo.com` | Drop | Keycloak, group `games` |
+| App | Who can open it |
+|---|---|
+| Portal (Keycloak account theme) | every user; shows only the apps their groups allow |
+| Keycloak | the identity provider, federated to LLDAP |
+| LLDAP admin | `platform-admin`, then LLDAP's own login |
+| Grafana | `platform-admin` |
+| RomM | group `roms` |
+| Drop | group `games` |
 
 Accounts exist only in LLDAP; there is no self sign-up. Groups decide which apps a user can open.
 
