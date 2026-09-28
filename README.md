@@ -23,4 +23,4 @@ Every app gets container metrics, logs and restart/OOM alerts. Beyond that:
 | Grafana | yes | no | n/a |
 | Prometheus, Alertmanager, Loki, Tempo, blackbox exporter, OpenTelemetry Operator | no | no | n/a |
 
-Alertmanager also sends a heartbeat to an external service, so the cluster going dark still pages.
+Alertmanager also sends a heartbeat to healthchecks.io, so the cluster going dark still pages.
