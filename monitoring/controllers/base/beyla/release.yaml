@@ -36,7 +36,8 @@ spec:
         # out (instrumenting Tempo would trace Tempo receiving traces).
         discovery:
           instrument:
-            - k8s_namespace: "{romm,paperless,drop,lldap,portal,keycloak}"
+            # Only apps with no OpenTelemetry of their own (CHG0030495).
+            - k8s_namespace: "{paperless,lldap,media-private}"
         # Spans only. Tempo's metrics-generator already turns spans into the
         # RED metrics and service graph the dashboards read, so Beyla's own
         # Prometheus metrics would be a second copy.
@@ -47,13 +48,8 @@ spec:
           # the same pattern as the earlier Tempo crash loop.
           sampler:
             name: parentbased_traceidratio
-            arg: "0.05"
-        # Unsampled RED metrics for dashboards and alerts. Traces are sampled
-        # at 5% (above), so rates derived from spans read about 1/20 of real
-        # traffic; these count every request.
-        prometheus_export:
-          port: 9090
-          path: /metrics
+            arg: "0.25"
+        # No prometheus_export: its series added ~300Mi to Prometheus on 2026-09-26 (INC0044913).
         # Group URLs into routes (/api/roms/{id}) so the endpoint label stays
         # low-cardinality when an app has no route information of its own.
         routes:
@@ -66,15 +62,12 @@ spec:
     nodeSelector:
       kubernetes.io/hostname: thinkserver
     service:
-      enabled: true
+      enabled: false
     serviceMonitor:
-      enabled: true
-      # Prometheus only selects ServiceMonitors carrying this label.
-      additionalLabels:
-        release: kube-prometheus-stack
+      enabled: false
     resources:
       requests:
         cpu: 50m
-        memory: 128Mi
+        memory: 256Mi   # request = limit (PRB0000001)
       limits:
-        memory: 512Mi
+        memory: 256Mi

@@ -6,4 +6,4 @@ resources:
   - blackbox
   - tempo
   - opentelemetry-operator
-  # - beyla   # rolled back after INC0044913 (CHG0030464); returns only as a canary per CHG0030488/0483
+  - beyla   # back 2026-09-27: 256Mi cap, thinkserver only, apps without OTel (CHG0030495)
