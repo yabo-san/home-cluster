@@ -85,7 +85,7 @@ spec:
               cpu: 200m
               memory: 512Mi
             limits:
-              memory: 2Gi
+              memory: 1280Mi   # uses ~650Mi; OCR spikes (CHG0030493)
       volumes:
         - name: data
           persistentVolumeClaim:

@@ -69,7 +69,7 @@ spec:
               cpu: 50m
               memory: 256Mi
             limits:
-              memory: 1Gi
+              memory: 640Mi   # uses ~330Mi (CHG0030493)
       volumes:
         - name: data
           persistentVolumeClaim:

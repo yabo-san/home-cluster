@@ -156,7 +156,7 @@ spec:
               cpu: 100m
               memory: 512Mi
             limits:
-              memory: 2Gi
+              memory: 1536Mi   # uses ~1.1Gi; scans spike (CHG0030493)
       volumes:
         - name: data
           persistentVolumeClaim:

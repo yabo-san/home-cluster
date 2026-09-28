@@ -43,6 +43,11 @@ spec:
     kubeProxy:
       enabled: false 
     grafana:
+      resources:   # had none; uses ~300Mi (CHG0030493)
+        requests:
+          memory: 256Mi
+        limits:
+          memory: 512Mi
       # Was `adminPassword: password` (public repo!). Now sourced from a SOPS'd
       # secret so the tunnel can't expose an admin/password login. Create the
       # `grafana-admin` secret in monitoring/configs/staging before this applies.
@@ -216,6 +221,11 @@ spec:
     alertmanager:
       alertmanagerSpec:
         # Next to Prometheus: either one dying alone must not silence alerts (CHG0030492).
+        resources:   # had none; uses ~55Mi (CHG0030493)
+          requests:
+            memory: 128Mi
+          limits:
+            memory: 128Mi
         nodeSelector:
           kubernetes.io/hostname: thinkserver
         secrets:
@@ -274,6 +284,11 @@ spec:
             equal: ["instance"]
     prometheus:
       prometheusSpec:
+        resources:   # had none; uses ~850Mi and grows with series (CHG0030493)
+          requests:
+            memory: 768Mi
+          limits:
+            memory: 1280Mi
         # Accept Tempo's metrics-generator writes (span metrics + service graph).
         enableRemoteWriteReceiver: true
         # Persistent TSDB. Without this the data lived in an emptyDir and every
