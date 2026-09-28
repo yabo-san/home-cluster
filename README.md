@@ -1,11 +1,10 @@
 # home-cluster
 
 A self-hosted, open-source take on the SSO and observability I used in production (OneLogin, New Relic):
-Keycloak on an LLDAP directory for single sign-on, and Prometheus, Loki, Tempo and Grafana for metrics,
-logs, traces and APM.
 
-k3s cluster managed with Flux CD. Public apps are reached through Cloudflare Tunnels. Secrets are
-encrypted in the repo with SOPS + age and decrypted by Flux.
+- **SSO:** Keycloak on an LLDAP directory, with a custom portal theme built in GitHub Actions and pinned by digest from GHCR
+- **Observability:** the LGTM stack with Prometheus in place of Mimir (Loki, Grafana, Tempo), OpenTelemetry for traces and APM
+- **Platform:** k3s managed with Flux CD, public apps behind Cloudflare Tunnels, secrets encrypted with SOPS + age, dependency updates by Renovate
 
 ## Apps and how each is monitored
 
