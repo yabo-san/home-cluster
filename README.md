@@ -8,8 +8,14 @@ Every app gets container metrics, logs and restart/OOM alerts. Beyond that:
 
 | App | Uptime probe | APM (traces) | Database metrics |
 |---|---|---|---|
-| Keycloak (SSO) with LLDAP | yes | Keycloak yes, LLDAP no | Postgres |
+| Keycloak (SSO, custom portal theme) | yes | yes | Postgres |
+| LLDAP (user directory) | yes | no | n/a |
 | RomM | yes | yes | MariaDB |
 | Drop | yes | yes | Postgres |
 | Paperless | no | no | Redis |
-| Grafana, Prometheus, Loki, Tempo | Grafana | no | n/a |
+| Cloudflare Tunnels | via each app's probe | no | tunnel connection metrics |
+| Renovate (dependency updates) | no | no | n/a |
+| Grafana | yes | no | n/a |
+| Prometheus, Alertmanager, Loki, Tempo, blackbox exporter, OpenTelemetry Operator | no | no | n/a |
+
+Alertmanager also sends a heartbeat to an external service, so the cluster going dark still pages.
