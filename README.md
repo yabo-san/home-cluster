@@ -47,7 +47,3 @@ key in `flux-system`.
 ```bash
 sops --encrypt --in-place path/to/secret.yaml
 ```
-
-## Access
-
-`kubectl` and `k9s` over Tailscale; users need no VPN.
