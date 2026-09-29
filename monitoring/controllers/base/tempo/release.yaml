@@ -52,23 +52,22 @@ spec:
             processors:
               - service-graphs
               - span-metrics
-      # Completing a block costs memory in proportion to the block's size.
-      # Tempo's default lets one grow to 500MB or 30 minutes; a RomM library
-      # scan filled that at 100% sampling and 768Mi could not complete it:
-      # the GC thrashed at the ceiling, /ready timed out, and liveness killed
-      # it on the same block every start (INC0044909). 1536Mi fixed it until
-      # CHG0030492 set 512Mi and CHG0030494 raised sampling to 25%: 181
-      # restarts in 26h on one block (INC0044922). Neither node can request
-      # 1536Mi, so cap the block instead: 50MB or 10 minutes, whichever first.
-      ingester:
-        max_block_bytes: 52428800
-        max_block_duration: 10m
+      # Measured over 3 days at a 1536Mi limit: working set p90 527Mi, max
+      # 738Mi. That is Tempo 2.9 with the metrics-generator on, idle or not.
+      # CHG0030492 set request = limit = 512Mi and it died 181 times in 26h:
+      # climbed to ~505Mi every start, GC thrashed at the ceiling, /ready
+      # timed out, liveness killed it (INC0044922; INC0044909 was the same
+      # symptom with a bigger limit and a scan-sized block).
+      # Request stays 512Mi because the worker's requests are at 95% and
+      # thinkserver has had 316Mi free in the same window. The limit is the
+      # measured max plus headroom. This is the one pod on the worker whose
+      # limit exceeds its request; the next one needs the third node.
       resources:
         requests:
           cpu: 100m
-          memory: 512Mi   # request = limit; an over-limit Tempo restarts alone instead of freezing the node (CHG0030492)
-        limits:
           memory: 512Mi
+        limits:
+          memory: 1Gi
     nodeSelector:
       kubernetes.io/hostname: workernode
     persistence:
