@@ -52,9 +52,17 @@ spec:
             processors:
               - service-graphs
               - span-metrics
-      # 768Mi was not enough to complete a block a RomM library scan filled at
-      # 100% sampling: the GC thrashed at the ceiling, /ready timed out, and
-      # liveness killed it on the same block every start.
+      # Completing a block costs memory in proportion to the block's size.
+      # Tempo's default lets one grow to 500MB or 30 minutes; a RomM library
+      # scan filled that at 100% sampling and 768Mi could not complete it:
+      # the GC thrashed at the ceiling, /ready timed out, and liveness killed
+      # it on the same block every start (INC0044909). 1536Mi fixed it until
+      # CHG0030492 set 512Mi and CHG0030494 raised sampling to 25%: 181
+      # restarts in 26h on one block (INC0044922). Neither node can request
+      # 1536Mi, so cap the block instead: 50MB or 10 minutes, whichever first.
+      ingester:
+        max_block_bytes: 52428800
+        max_block_duration: 10m
       resources:
         requests:
           cpu: 100m
