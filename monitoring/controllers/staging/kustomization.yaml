@@ -6,4 +6,4 @@ resources:
   - blackbox
   - tempo
   - opentelemetry-operator
-  # - beyla   # gated 2026-09-28: at its 256Mi cap it thrashed thinkserver disk (220 MB/s reads, iowait 57%); needs the third node (CHG0030483)
+  - beyla   # back 2026-10-03 (CHG0030499, owner emergency approval): 512Mi cap, thinkserver only; gated 2026-09-28 at 256Mi after INC0044921
