@@ -6,7 +6,7 @@ resources:
   - drop
   - grafana-tunnel
   - lldap
-  - paperless
+  # - paperless
   - portal
   # romm: enabled 2026-09-25. Keycloak client `romm` created and its secret is in
   # apps/staging/romm/secret.yaml; tunnel 47d0b5e1 created and its credentials are
