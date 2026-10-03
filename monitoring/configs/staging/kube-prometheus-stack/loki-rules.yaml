@@ -106,13 +106,16 @@ data:
               runbook: "kubectl -n kube-system get pods -l k8s-app=kube-dns -o wide. One CoreDNS replica on thinkserver is the known cause (CHG0030482)."
 
           - alert: ImportFailed
-            # Drop's metadata-import bug (the reason its image is pinned by digest)
-            # and a Paperless document that fails to consume.
+            # Drop's metadata-import bug (the reason its image is pinned by digest).
+            # The Paperless half left with CHG0030497. Its regex also carried a bare \w,
+            # which LogQL's string parser rejects ("invalid char escape"), and one bad
+            # expression made the ruler drop this whole file: none of the eight rules
+            # evaluated from 2026-09-27 until this was found on 2026-10-03.
             expr: |
-              sum by (namespace) (count_over_time({namespace=~"drop|paperless"} |~ "Argument mDescription is missing|(?i)consum\w* .*(error|failed)" [30m])) > 0
+              sum by (namespace) (count_over_time({namespace="drop"} |~ "Argument mDescription is missing" [30m])) > 0
             for: 0m
             labels:
               severity: warning
             annotations:
               summary: "{{ $labels.namespace }}: an import or document consume failed"
-              runbook: "Drop: check the image digest still includes the #481 fix. Paperless: the document list shows the failed file and the reason."
+              runbook: "Drop: check the image digest still includes the #481 fix."
