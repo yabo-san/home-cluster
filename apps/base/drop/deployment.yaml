@@ -38,7 +38,7 @@ spec:
           #
           # A digest is reproducible where `latest` is not: this is exactly the
           # bytes that were tested, and Renovate can still raise a PR for it.
-          image: ghcr.io/drop-oss/drop@sha256:2995f0b75ac3a6bc4d33b584f80882c3415f8bd9182c264378e3829b259b0bd4
+          image: ghcr.io/drop-oss/drop@sha256:c076aecec2f3b53bdb682c6f032ee12da825ee1bf31e0f99d4598c8d90699ec1
           ports:
             - containerPort: 3000
           env:
